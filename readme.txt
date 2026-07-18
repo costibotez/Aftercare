@@ -59,6 +59,8 @@ The free plugin tells you *that* something regressed and *what changed*. Afterca
 * **Slack and webhook notifications**
 * **Unlimited tracked URLs**, per-URL budgets, 13-month history and unlimited ledger retention
 
+Aftercare is built and maintained by [Nomad Developer](https://www.nomad-developer.co.uk/).
+
 = Privacy =
 
 Aftercare does not phone home. CrUX data is fetched directly from Google's API using the key you provide. The optional RUM beacon posts anonymous metric values (no cookies, no personal data, no IPs stored) to your own site's REST API and can be disabled at any time.
