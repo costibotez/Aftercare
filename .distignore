@@ -9,6 +9,7 @@ src/Notifications/Webhook.php
 templates/report-default.php
 
 # Repository files.
+.wordpress-org
 .distignore
 .git
 .github

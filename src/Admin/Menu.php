@@ -33,16 +33,21 @@ final class Menu {
 		/* translators: %d: number of open incidents */
 		$badge = $open > 0 ? ' <span class="awaiting-mod">' . (int) $open . '</span>' : '';
 
+		// One shared callable for the top-level page and its mirror submenu —
+		// two distinct instances would register two render callbacks on the
+		// same page hook and paint the dashboard twice.
+		$dashboard = array( new DashboardPage(), 'render' );
+
 		add_menu_page(
 			__( 'Aftercare', 'aftercare' ),
 			__( 'Aftercare', 'aftercare' ) . $badge,
 			self::CAP,
 			'aftercare',
-			array( new DashboardPage(), 'render' ),
+			$dashboard,
 			'dashicons-chart-line',
 			58
 		);
-		add_submenu_page( 'aftercare', __( 'Dashboard', 'aftercare' ), __( 'Dashboard', 'aftercare' ), self::CAP, 'aftercare', array( new DashboardPage(), 'render' ) );
+		add_submenu_page( 'aftercare', __( 'Dashboard', 'aftercare' ), __( 'Dashboard', 'aftercare' ), self::CAP, 'aftercare', $dashboard );
 		add_submenu_page( 'aftercare', __( 'Change Ledger', 'aftercare' ), __( 'Ledger', 'aftercare' ), self::CAP, 'aftercare-ledger', array( new LedgerPage(), 'render' ) );
 		add_submenu_page( 'aftercare', __( 'Incidents', 'aftercare' ), __( 'Incidents', 'aftercare' ) . $badge, self::CAP, 'aftercare-incidents', array( new IncidentsPage(), 'render' ) );
 		add_submenu_page( 'aftercare', __( 'Client Reports', 'aftercare' ), __( 'Reports', 'aftercare' ), self::CAP, 'aftercare-reports', array( new ReportsPage(), 'render' ) );
