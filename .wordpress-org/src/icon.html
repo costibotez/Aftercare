@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+	* { margin: 0; padding: 0; }
+	html, body { width: 100vw; height: 100vh; overflow: hidden; }
+	body { background: linear-gradient(135deg, #0d9488 0%, #0f766e 55%, #115e59 100%); }
+	svg { display: block; width: 100%; height: 100%; }
+</style>
+</head>
+<body>
+	<!-- Heartbeat-sparkline: care + monitoring in one mark, amber breach dot. -->
+	<svg viewBox="0 0 256 256">
+		<line x1="28" y1="148" x2="228" y2="148" stroke="#fbbf24" stroke-width="7" stroke-dasharray="16,13" stroke-linecap="round" opacity="0.85"/>
+		<path d="M28 170 L76 170 L100 108 L128 196 L152 132 L168 170 L228 170"
+			fill="none" stroke="#ffffff" stroke-width="17" stroke-linecap="round" stroke-linejoin="round"/>
+		<circle cx="196" cy="92" r="17" fill="#fbbf24" stroke="#ffffff" stroke-width="7"/>
+	</svg>
+</body>
+</html>
