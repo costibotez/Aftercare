@@ -178,7 +178,7 @@ final class SettingsPage {
 			'tracked_urls'           => $urls,
 			'budgets'                => $budgets,
 			'rum_enabled'            => ! empty( $_POST['rum_enabled'] ),
-			'rum_sample_rate'        => max( 1, min( 100, (int) ( $_POST['rum_sample_rate'] ?? 10 ) ) ),
+			'rum_sample_rate'        => isset( $_POST['rum_sample_rate'] ) ? max( 1, min( 100, absint( wp_unslash( $_POST['rum_sample_rate'] ) ) ) ) : 10,
 			'alert_email'            => sanitize_email( wp_unslash( $_POST['alert_email'] ?? '' ) ),
 			'weekly_digest'          => ! empty( $_POST['weekly_digest'] ),
 			'keep_data_on_uninstall' => ! empty( $_POST['keep_data_on_uninstall'] ),

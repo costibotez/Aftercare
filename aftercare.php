@@ -87,10 +87,18 @@ if ( file_exists( AFTERCARE_DIR . 'vendor/freemius/start.php' ) && ! function_ex
 register_activation_hook( __FILE__, array( 'Aftercare\\Core\\Activator', 'activate' ) );
 register_deactivation_hook( __FILE__, array( 'Aftercare\\Core\\Activator', 'deactivate' ) );
 
+// Since WP 6.7 translations must not load before the init hook.
+add_action(
+	'init',
+	static function () {
+		load_plugin_textdomain( 'aftercare', false, dirname( plugin_basename( AFTERCARE_FILE ) ) . '/languages' );
+	},
+	0
+);
+
 add_action(
 	'plugins_loaded',
 	static function () {
-		load_plugin_textdomain( 'aftercare', false, dirname( plugin_basename( AFTERCARE_FILE ) ) . '/languages' );
 		Aftercare\Core\Plugin::instance()->boot();
 	}
 );
