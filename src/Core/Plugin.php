@@ -14,8 +14,6 @@ use Aftercare\Notifications\Emailer;
 use Aftercare\Notifications\Slack;
 use Aftercare\Notifications\Webhook;
 use Aftercare\Notifications\WeeklyDigest;
-use Aftercare\Reports\Builder as ReportBuilder;
-use Aftercare\Reports\Repository as ReportRepository;
 use Aftercare\Vitals\RumController;
 use Aftercare\Vitals\SampleRepository;
 
@@ -64,7 +62,8 @@ final class Plugin {
 		// Notifications subscribe to incident lifecycle actions.
 		( new Emailer() )->register();
 		( new WeeklyDigest() )->register();
-		if ( License::is_pro() ) {
+		// Slack/webhook notifiers ship only in the premium build.
+		if ( License::is_pro() && class_exists( Slack::class ) && class_exists( Webhook::class ) ) {
 			( new Slack() )->register();
 			( new Webhook() )->register();
 		}
@@ -93,13 +92,5 @@ final class Plugin {
 
 	public function samples(): SampleRepository {
 		return $this->get( SampleRepository::class );
-	}
-
-	public function reports(): ReportRepository {
-		return $this->get( ReportRepository::class );
-	}
-
-	public function report_builder(): ReportBuilder {
-		return $this->get( ReportBuilder::class );
 	}
 }

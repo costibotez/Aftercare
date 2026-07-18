@@ -35,7 +35,7 @@ It is built for agencies and freelancers who maintain client sites on monthly ca
 
 * Records plugin updates (old → new version), activations, deactivations, theme updates and switches, core updates, allow-listed settings changes, content publishes and new users
 * Human-readable entries with the responsible user: "WP Rocket updated 3.15 to 3.16 by admin"
-* Filterable timeline by type and date, 90 days of history
+* Filterable timeline by type and date, CSV export, 90 days of history
 
 = 🧰 Fits into your workflow =
 
@@ -57,7 +57,7 @@ The free plugin tells you *that* something regressed and *what changed*. Afterca
 * **Cause attribution** — ranks every change from the 72 hours before a regression with high / medium / low confidence badges, so you fix the right thing first
 * **White-label client reports** — monthly drafts with vitals versus last month, work performed, incidents caught and resolved; your logo, colours and a personal note; print/PDF and email delivery
 * **Slack and webhook notifications**
-* **Unlimited tracked URLs**, per-URL budgets, 13-month history, unlimited ledger retention and CSV export
+* **Unlimited tracked URLs**, per-URL budgets, 13-month history and unlimited ledger retention
 
 = Privacy =
 

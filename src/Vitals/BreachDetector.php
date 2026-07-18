@@ -49,10 +49,12 @@ final class BreachDetector {
 					}
 					$incident_id = $this->incidents->open( $url, $metric, $baseline, $p75, $budget );
 					if ( $incident_id ) {
-						// Attribution is computed for every incident; the free
-						// tier gates the *display* of ranked causes, not the data.
-						$causes = ( new Attribution() )->rank( $url, Util::now() );
-						$this->incidents->set_causes( $incident_id, $causes );
+						// The attribution engine ships only in the premium
+						// build; the free build stores no ranked causes.
+						if ( class_exists( Attribution::class ) ) {
+							$causes = ( new Attribution() )->rank( $url, Util::now() );
+							$this->incidents->set_causes( $incident_id, $causes );
+						}
 
 						$incident = $this->incidents->find( $incident_id );
 
