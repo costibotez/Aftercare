@@ -1,0 +1,12 @@
+.distignore
+.git
+.github
+.gitignore
+.DS_Store
+README.md
+composer.json
+composer.lock
+node_modules
+phpcs.xml
+phpcs.xml.dist
+*.zip

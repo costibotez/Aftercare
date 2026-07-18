@@ -121,7 +121,24 @@ final class Repository {
 
 	public function count_open(): int {
 		global $wpdb;
-		return (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$this->table()} WHERE status IN ('open','acknowledged')" ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+		return (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$this->table()} WHERE status IN ('open','acknowledged')" ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table name is built from $wpdb->prefix, no user input.
+	}
+
+	/**
+	 * Incidents opened since a GMT datetime (weekly digest).
+	 *
+	 * @return array<int, array<string, mixed>>
+	 */
+	public function opened_since( string $from_gmt ): array {
+		global $wpdb;
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT * FROM {$this->table()} WHERE opened_at >= %s ORDER BY opened_at DESC", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				$from_gmt
+			),
+			ARRAY_A
+		);
+		return $rows ?: array();
 	}
 
 	/**

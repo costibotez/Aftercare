@@ -25,8 +25,10 @@ delete_option( 'aftercare_schema_version' );
 delete_option( 'aftercare_cron_last_run' );
 delete_option( 'aftercare_plugin_versions' );
 delete_option( 'aftercare_rum_buffer' );
+delete_option( 'aftercare_onboarding_dismissed' );
 
 // Transients (CrUX caches).
 $wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE '\\_transient\\_aftercare\\_%' OR option_name LIKE '\\_transient\\_timeout\\_aftercare\\_%'" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery
 
 wp_clear_scheduled_hook( 'aftercare_daily_tasks' );
+wp_clear_scheduled_hook( 'aftercare_weekly_digest' );

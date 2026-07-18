@@ -88,7 +88,7 @@ final class Repository {
 		if ( $params ) {
 			return (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$this->table()} {$where}", ...$params ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		}
-		return (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$this->table()}" ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+		return (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$this->table()}" ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table name is built from $wpdb->prefix, no user input.
 	}
 
 	/**
@@ -146,6 +146,28 @@ final class Repository {
 				"SELECT event_type, COUNT(*) AS total FROM {$this->table()} WHERE occurred_at >= %s AND occurred_at < %s GROUP BY event_type", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 				$start,
 				$end
+			),
+			ARRAY_A
+		);
+		$out = array();
+		foreach ( $rows ?: array() as $row ) {
+			$out[ (string) $row['event_type'] ] = (int) $row['total'];
+		}
+		return $out;
+	}
+
+	/**
+	 * Count per event type inside an arbitrary GMT window (weekly digest).
+	 *
+	 * @return array<string, int>
+	 */
+	public function counts_between( string $from_gmt, string $to_gmt ): array {
+		global $wpdb;
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT event_type, COUNT(*) AS total FROM {$this->table()} WHERE occurred_at >= %s AND occurred_at <= %s GROUP BY event_type ORDER BY total DESC", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				$from_gmt,
+				$to_gmt
 			),
 			ARRAY_A
 		);

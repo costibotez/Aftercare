@@ -1,7 +1,11 @@
 <?php
 namespace Aftercare\Core;
 
+use Aftercare\Admin\AdminBar;
+use Aftercare\Admin\DashboardWidget;
 use Aftercare\Admin\Menu;
+use Aftercare\Admin\Onboarding;
+use Aftercare\Admin\SiteHealth;
 use Aftercare\Incidents\Repository as IncidentRepository;
 use Aftercare\Ledger\Listeners;
 use Aftercare\Ledger\Repository as LedgerRepository;
@@ -9,6 +13,7 @@ use Aftercare\Licensing\License;
 use Aftercare\Notifications\Emailer;
 use Aftercare\Notifications\Slack;
 use Aftercare\Notifications\Webhook;
+use Aftercare\Notifications\WeeklyDigest;
 use Aftercare\Reports\Builder as ReportBuilder;
 use Aftercare\Reports\Repository as ReportRepository;
 use Aftercare\Vitals\RumController;
@@ -58,14 +63,24 @@ final class Plugin {
 
 		// Notifications subscribe to incident lifecycle actions.
 		( new Emailer() )->register();
+		( new WeeklyDigest() )->register();
 		if ( License::is_pro() ) {
 			( new Slack() )->register();
 			( new Webhook() )->register();
 		}
 
+		// Admin bar shows on the front end too for logged-in administrators.
+		( new AdminBar() )->register();
+		( new Privacy() )->register();
+
 		if ( is_admin() ) {
 			( new Menu() )->register();
+			( new Onboarding() )->register();
+			( new DashboardWidget() )->register();
+			( new SiteHealth() )->register();
 		}
+
+		CliCommands::register();
 	}
 
 	public function incidents(): IncidentRepository {

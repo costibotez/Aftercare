@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Aftercare
  * Plugin URI:        https://github.com/costibotez/aftercare
- * Description:       Performance accountability for agencies and freelancers. Aftercare watches every client site after handover, records every change, detects Core Web Vitals regressions and turns the month into a white-label client report.
+ * Description:       Daily Core Web Vitals monitoring, a complete change ledger and regression incidents with email alerts. Know what changed, know what it cost — catch performance problems before your visitors do.
  * Version:           1.0.0
  * Requires at least: 6.4
  * Requires PHP:      8.1
@@ -87,10 +87,18 @@ if ( file_exists( AFTERCARE_DIR . 'vendor/freemius/start.php' ) && ! function_ex
 register_activation_hook( __FILE__, array( 'Aftercare\\Core\\Activator', 'activate' ) );
 register_deactivation_hook( __FILE__, array( 'Aftercare\\Core\\Activator', 'deactivate' ) );
 
+// Since WP 6.7 translations must not load before the init hook.
+add_action(
+	'init',
+	static function () {
+		load_plugin_textdomain( 'aftercare', false, dirname( plugin_basename( AFTERCARE_FILE ) ) . '/languages' );
+	},
+	0
+);
+
 add_action(
 	'plugins_loaded',
 	static function () {
-		load_plugin_textdomain( 'aftercare', false, dirname( plugin_basename( AFTERCARE_FILE ) ) . '/languages' );
 		Aftercare\Core\Plugin::instance()->boot();
 	}
 );

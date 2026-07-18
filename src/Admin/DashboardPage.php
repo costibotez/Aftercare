@@ -106,17 +106,7 @@ final class DashboardPage {
 		$series = $samples->series( $url, $metric, 30 );
 		$latest = ! empty( $series ) ? end( $series )['value'] : null;
 		$budget = Options::budget( $metric, $url );
-
-		$status = 'empty';
-		if ( null !== $latest ) {
-			if ( $budget > 0 && $latest > $budget ) {
-				$status = 'fail';
-			} elseif ( $budget > 0 && $latest > 0.8 * $budget ) {
-				$status = 'warn';
-			} else {
-				$status = 'pass';
-			}
-		}
+		$status = \Aftercare\Vitals\Status::evaluate( $latest, $budget );
 
 		$labels = array(
 			'pass'  => __( 'Pass', 'aftercare' ),

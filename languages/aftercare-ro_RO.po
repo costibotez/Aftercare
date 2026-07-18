@@ -1,211 +1,998 @@
-# Romanian translation for Aftercare.
 msgid ""
 msgstr ""
 "Project-Id-Version: Aftercare 1.0.0\n"
+"Report-Msgid-Bugs-To: \n"
+"Last-Translator: \n"
+"Language-Team: \n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2026-07-18T19:38:33+00:00\n"
+"PO-Revision-Date: 2026-07-18T19:38:33+00:00\n"
 "Language: ro_RO\n"
 "Plural-Forms: nplurals=3; plural=(n==1 ? 0 : (n==0 || (n%100>0 && n%100<20)) ? 1 : 2);\n"
 "X-Domain: aftercare\n"
 
+#. Plugin Name of the plugin
+#. Author of the plugin
+#: aftercare.php
+#: src/Admin/Menu.php:37
+#: src/Admin/Menu.php:38
+#: src/Core/Privacy.php:24
 msgid "Aftercare"
 msgstr "Aftercare"
 
+#: src/Admin/Menu.php:45
 msgid "Dashboard"
 msgstr "Panou de control"
 
+#: src/Admin/Menu.php:46
 msgid "Ledger"
 msgstr "Registru"
 
+#: src/Admin/LedgerPage.php:54
+#: src/Admin/Menu.php:46
 msgid "Change Ledger"
 msgstr "Registrul modificărilor"
 
+#: src/Admin/DashboardPage.php:62
+#: src/Admin/IncidentsPage.php:31
+#: src/Admin/Menu.php:47
 msgid "Incidents"
 msgstr "Incidente"
 
+#: src/Admin/Menu.php:48
 msgid "Reports"
 msgstr "Rapoarte"
 
+#: src/Admin/Menu.php:48
+#: src/Admin/ReportsPage.php:18
 msgid "Client Reports"
 msgstr "Rapoarte pentru clienți"
 
+#: src/Admin/Menu.php:49
 msgid "Settings"
 msgstr "Setări"
 
+#: src/Admin/Menu.php:49
+#: src/Admin/SettingsPage.php:21
 msgid "Aftercare Settings"
 msgstr "Setări Aftercare"
 
+#: src/Admin/SettingsPage.php:24
 msgid "Settings saved."
 msgstr "Setările au fost salvate."
 
+#: src/Admin/SettingsPage.php:149
 msgid "Save settings"
 msgstr "Salvează setările"
 
+#: src/Admin/DashboardPage.php:112
+#: src/Admin/DashboardWidget.php:40
+#: templates/email-digest.php:23
 msgid "Pass"
 msgstr "Trecut"
 
+#: src/Admin/DashboardPage.php:113
+#: src/Admin/DashboardWidget.php:41
+#: templates/email-digest.php:24
 msgid "Warn"
 msgstr "Avertisment"
 
+#: src/Admin/DashboardPage.php:114
+#: src/Admin/DashboardWidget.php:42
+#: templates/email-digest.php:25
 msgid "Fail"
 msgstr "Eșuat"
 
+#: src/Admin/DashboardPage.php:115
+#: src/Admin/DashboardWidget.php:43
+#: templates/email-digest.php:26
 msgid "No data"
 msgstr "Fără date"
 
+#: src/Admin/IncidentsPage.php:172
+#: src/Admin/ReportsPage.php:75
 msgid "Open"
 msgstr "Deschis"
 
+#: src/Admin/IncidentsPage.php:173
 msgid "Acknowledged"
 msgstr "Confirmat"
 
+#: src/Admin/IncidentsPage.php:174
 msgid "Resolved"
 msgstr "Rezolvat"
 
+#: src/Admin/IncidentsPage.php:175
 msgid "Dismissed"
 msgstr "Respins"
 
+#: src/Admin/IncidentsPage.php:105
 msgid "Acknowledge"
 msgstr "Confirmă"
 
+#: src/Admin/IncidentsPage.php:106
 msgid "Mark resolved"
 msgstr "Marchează ca rezolvat"
 
+#: src/Admin/IncidentsPage.php:107
+#: src/Admin/Onboarding.php:69
 msgid "Dismiss"
 msgstr "Respinge"
 
+#: src/Admin/IncidentsPage.php:60
 msgid "Details"
 msgstr "Detalii"
 
+#: src/Admin/IncidentsPage.php:72
 msgid "Incident detail"
 msgstr "Detalii incident"
 
+#: src/Admin/IncidentsPage.php:83
 msgid "All incidents"
 msgstr "Toate incidentele"
 
+#: src/Admin/DashboardPage.php:74
+#: src/Admin/DashboardWidget.php:78
+#: src/Admin/SiteHealth.php:114
 msgid "View incidents"
 msgstr "Vezi incidentele"
 
+#: src/Admin/IncidentsPage.php:40
+#: templates/report-default.php:81
+#: templates/report-default.php:127
 msgid "Metric"
 msgstr "Metrică"
 
+#: src/Admin/IncidentsPage.php:41
+#: templates/report-default.php:128
 msgid "URL"
 msgstr "URL"
 
+#: src/Admin/IncidentsPage.php:42
 msgid "Breach"
 msgstr "Depășire"
 
+#: src/Admin/IncidentsPage.php:43
+#: src/Admin/IncidentsPage.php:90
+#: templates/email-incident.php:44
 msgid "Budget"
 msgstr "Buget"
 
+#: src/Admin/IncidentsPage.php:44
 msgid "Baseline"
 msgstr "Referință"
 
+#: src/Admin/IncidentsPage.php:45
+#: src/Admin/ReportsPage.php:61
+#: templates/report-default.php:130
 msgid "Status"
 msgstr "Stare"
 
+#: src/Admin/IncidentsPage.php:46
+#: src/Admin/IncidentsPage.php:92
 msgid "Opened"
 msgstr "Deschis la"
 
+#: src/Admin/IncidentsPage.php:121
 msgid "Probable cause"
 msgstr "Cauză probabilă"
 
+#: src/Admin/IncidentsPage.php:183
 msgid "High confidence"
 msgstr "Încredere ridicată"
 
+#: src/Admin/IncidentsPage.php:184
 msgid "Medium confidence"
 msgstr "Încredere medie"
 
+#: src/Admin/IncidentsPage.php:185
 msgid "Low confidence"
 msgstr "Încredere scăzută"
 
+#: src/Admin/IncidentsPage.php:144
+#: src/Admin/ReportsPage.php:24
 msgid "Upgrade to Pro"
 msgstr "Treci la Pro"
 
+#: src/Admin/DashboardPage.php:86
 msgid "Recent changes"
 msgstr "Modificări recente"
 
+#: src/Admin/DashboardPage.php:96
 msgid "Full ledger"
 msgstr "Registrul complet"
 
+#: src/Admin/LedgerPage.php:70
 msgid "Filter"
 msgstr "Filtrează"
 
+#: src/Admin/LedgerPage.php:74
 msgid "Export CSV"
 msgstr "Exportă CSV"
 
+#: src/Admin/LedgerPage.php:58
 msgid "All event types"
 msgstr "Toate tipurile de evenimente"
 
+#: src/Admin/LedgerPage.php:32
 msgid "Plugin update"
 msgstr "Actualizare modul"
 
+#: src/Admin/LedgerPage.php:33
 msgid "Plugin activated"
 msgstr "Modul activat"
 
+#: src/Admin/LedgerPage.php:34
 msgid "Plugin deactivated"
 msgstr "Modul dezactivat"
 
+#: src/Admin/LedgerPage.php:35
 msgid "Theme update"
 msgstr "Actualizare temă"
 
+#: src/Admin/LedgerPage.php:36
 msgid "Theme switch"
 msgstr "Schimbare temă"
 
+#: src/Admin/LedgerPage.php:37
 msgid "Core update"
 msgstr "Actualizare WordPress"
 
+#: src/Admin/LedgerPage.php:38
 msgid "Settings change"
 msgstr "Modificare setări"
 
+#: src/Admin/LedgerPage.php:39
 msgid "Content published"
 msgstr "Conținut publicat"
 
+#: src/Admin/LedgerPage.php:40
 msgid "User created"
 msgstr "Utilizator creat"
 
+#: templates/email-incident.php:23
 msgid "Performance regression detected"
 msgstr "Regresie de performanță detectată"
 
+#: templates/email-incident.php:40
 msgid "Measured p75"
 msgstr "p75 măsurat"
 
+#: src/Admin/IncidentsPage.php:91
+#: templates/email-incident.php:48
 msgid "28-day baseline"
 msgstr "Referință pe 28 de zile"
 
+#: templates/email-incident.php:55
 msgid "View incident and recent changes"
 msgstr "Vezi incidentul și modificările recente"
 
+#: src/Admin/ReportsPage.php:112
 msgid "Send to client"
 msgstr "Trimite clientului"
 
+#: src/Admin/ReportsPage.php:100
 msgid "Save note"
 msgstr "Salvează nota"
 
+#: src/Admin/ReportsPage.php:98
 msgid "Personal note to the client"
 msgstr "Notă personală pentru client"
 
+#: src/Admin/ReportsPage.php:48
 msgid "Generate draft for last month"
 msgstr "Generează ciornă pentru luna trecută"
 
+#: templates/email-digest.php:44
+#: templates/report-default.php:78
 msgid "Core Web Vitals"
 msgstr "Core Web Vitals"
 
+#: templates/report-default.php:145
 msgid "Work performed this month"
 msgstr "Lucrări efectuate luna aceasta"
 
+#: templates/report-default.php:121
 msgid "Regressions caught this month"
 msgstr "Regresii detectate luna aceasta"
 
+#: templates/report-default.php:123
 msgid "No performance regressions were detected. All metrics stayed within budget."
 msgstr "Nu au fost detectate regresii de performanță. Toate metricile s-au încadrat în buget."
 
+#: templates/report-default.php:147
 msgid "No changes were recorded this month."
 msgstr "Nu au fost înregistrate modificări luna aceasta."
 
+#: src/Admin/DashboardPage.php:80
 msgid "Run daily checks now"
 msgstr "Rulează verificările zilnice acum"
 
+#: src/Admin/IncidentsPage.php:192
+#: src/Admin/LedgerPage.php:155
+#: src/Admin/Menu.php:65
+#: src/Admin/Onboarding.php:75
+#: src/Admin/ReportsPage.php:190
+#: src/Admin/SettingsPage.php:157
 msgid "You do not have permission to do that."
 msgstr "Nu ai permisiunea de a face asta."
+
+#. Plugin URI of the plugin
+#: aftercare.php
+msgid "https://github.com/costibotez/aftercare"
+msgstr ""
+
+#. Description of the plugin
+#: aftercare.php
+msgid "Daily Core Web Vitals monitoring, a complete change ledger and regression incidents with email alerts. Know what changed, know what it cost — catch performance problems before your visitors do."
+msgstr ""
+
+#. Author URI of the plugin
+#: aftercare.php
+msgid "https://github.com/costibotez"
+msgstr ""
+
+#: aftercare.php:31
+msgid "Aftercare requires PHP 8.1 or newer. The plugin is inactive until PHP is upgraded."
+msgstr ""
+
+#: src/Admin/AdminBar.php:37
+msgid "All vitals within budget"
+msgstr ""
+
+#: src/Admin/AdminBar.php:38
+msgid "Vitals approaching budget"
+msgstr ""
+
+#: src/Admin/AdminBar.php:39
+msgid "Vitals over budget"
+msgstr ""
+
+#: src/Admin/AdminBar.php:40
+msgid "No vitals data yet"
+msgstr ""
+
+#: src/Admin/DashboardPage.php:28
+msgid "Aftercare — Dashboard"
+msgstr ""
+
+#: src/Admin/DashboardPage.php:31
+msgid "Daily checks ran. Vitals, breach detection and retention are up to date."
+msgstr ""
+
+#. translators: %s: settings page URL
+#: src/Admin/DashboardPage.php:38
+#, php-format
+msgid "Add your Google API key in <a href=\"%s\">Aftercare Settings</a> to start pulling Core Web Vitals from the Chrome UX Report. First data appears within minutes."
+msgstr ""
+
+#. translators: %s: URL being monitored
+#: src/Admin/DashboardPage.php:47
+#, php-format
+msgid "Monitoring %s (p75, field data)"
+msgstr ""
+
+#. translators: %d: number of open incidents
+#: src/Admin/DashboardPage.php:67
+#: src/Admin/DashboardWidget.php:74
+#, php-format
+msgid "%d open incident needs attention."
+msgid_plural "%d open incidents need attention."
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""
+
+#: src/Admin/DashboardPage.php:72
+msgid "No open incidents. All metrics within budget."
+msgstr ""
+
+#: src/Admin/DashboardPage.php:76
+msgid "Maintenance"
+msgstr ""
+
+#: src/Admin/DashboardPage.php:89
+msgid "No changes recorded yet. Plugin updates, theme switches, publishes and settings changes will appear here within seconds of happening."
+msgstr ""
+
+#. translators: %s: budget value
+#: src/Admin/DashboardPage.php:127
+#, php-format
+msgid "Budget %s"
+msgstr ""
+
+#: src/Admin/DashboardWidget.php:35
+msgid "Aftercare — Site performance"
+msgstr ""
+
+#. translators: %s: settings page URL
+#: src/Admin/DashboardWidget.php:52
+#, php-format
+msgid "Add your Google API key in <a href=\"%s\">Aftercare Settings</a> to start monitoring Core Web Vitals."
+msgstr ""
+
+#: src/Admin/DashboardWidget.php:80
+msgid "No open incidents."
+msgstr ""
+
+#: src/Admin/DashboardWidget.php:83
+#: templates/email-digest.php:92
+msgid "Open Aftercare"
+msgstr ""
+
+#: src/Admin/IncidentsPage.php:34
+msgid "No incidents recorded. When a metric breaches its budget or regresses more than 20% against its 28-day baseline, an incident opens here and an alert email goes out."
+msgstr ""
+
+#: src/Admin/IncidentsPage.php:59
+msgid "ago"
+msgstr ""
+
+#: src/Admin/IncidentsPage.php:75
+msgid "Incident not found."
+msgstr ""
+
+#: src/Admin/IncidentsPage.php:89
+msgid "Breach p75"
+msgstr ""
+
+#: src/Admin/IncidentsPage.php:138
+msgid "No attribution data recorded for this incident."
+msgstr ""
+
+#: src/Admin/IncidentsPage.php:142
+msgid "Aftercare Pro tells you which change probably did this."
+msgstr ""
+
+#: src/Admin/IncidentsPage.php:143
+msgid "Pro ranks every change from the 72 hours before the regression with a confidence score — plugin updates, activations, publishes, settings — so you fix the right thing first."
+msgstr ""
+
+#: src/Admin/IncidentsPage.php:151
+msgid "Changes in the 72 hours before the breach"
+msgstr ""
+
+#: src/Admin/IncidentsPage.php:155
+msgid "No site changes were recorded in this window — an external factor (hosting, traffic, third-party scripts) is likely."
+msgstr ""
+
+#: src/Admin/LedgerPage.php:68
+msgid "From date"
+msgstr ""
+
+#: src/Admin/LedgerPage.php:69
+msgid "To date"
+msgstr ""
+
+#: src/Admin/LedgerPage.php:79
+msgid "No events match. Site changes are recorded automatically as they happen."
+msgstr ""
+
+#: src/Admin/LedgerPage.php:105
+msgid "Free keeps 90 days of history. Aftercare Pro keeps the ledger forever and adds CSV export."
+msgstr ""
+
+#. translators: 1: actor name, 2: human time diff
+#: src/Admin/LedgerPage.php:122
+#, php-format
+msgid "by %1$s · %2$s ago"
+msgstr ""
+
+#: src/Admin/LedgerPage.php:123
+msgid "system"
+msgstr ""
+
+#: src/Admin/LedgerPage.php:159
+msgid "CSV export is an Aftercare Pro feature."
+msgstr ""
+
+#: src/Admin/Onboarding.php:44
+msgid "Aftercare is almost ready — three steps to first data:"
+msgstr ""
+
+#: src/Admin/Onboarding.php:46
+msgid "Create a free Google API key with the <a href=\"https://console.cloud.google.com/apis/library/chromeuxreport.googleapis.com\" target=\"_blank\" rel=\"noopener\">Chrome UX Report API</a> enabled."
+msgstr ""
+
+#. translators: %s: settings page URL
+#: src/Admin/Onboarding.php:52
+#, php-format
+msgid "Paste it in <a href=\"%s\">Aftercare Settings</a> and optionally add tracked URLs."
+msgstr ""
+
+#. translators: %s: dashboard page URL
+#: src/Admin/Onboarding.php:62
+#, php-format
+msgid "Press <em>Run daily checks now</em> on the <a href=\"%s\">Aftercare dashboard</a> — vitals appear immediately."
+msgstr ""
+
+#: src/Admin/Onboarding.php:68
+msgid "Open Settings"
+msgstr ""
+
+#: src/Admin/ReportsPage.php:22
+msgid "Turn every month into proof of your work."
+msgstr ""
+
+#: src/Admin/ReportsPage.php:23
+msgid "Aftercare Pro drafts a white-label report per month: Core Web Vitals versus last month, every change you made, every regression caught and resolved — with your logo, your colours and a personal note. Print it, download it or email it straight to the client."
+msgstr ""
+
+#: src/Admin/ReportsPage.php:31
+msgid "Report sent to the configured client recipients."
+msgstr ""
+
+#: src/Admin/ReportsPage.php:34
+msgid "Sending failed. Check that client recipients are configured in Settings and that the site can send email."
+msgstr ""
+
+#: src/Admin/ReportsPage.php:49
+msgid "Generate draft for this month (partial)"
+msgstr ""
+
+#: src/Admin/ReportsPage.php:54
+msgid "No reports yet. Drafts are generated automatically on the 1st of each month, or on demand above."
+msgstr ""
+
+#: src/Admin/ReportsPage.php:60
+msgid "Period"
+msgstr ""
+
+#: src/Admin/ReportsPage.php:62
+msgid "Generated"
+msgstr ""
+
+#: src/Admin/ReportsPage.php:63
+#: src/Admin/ReportsPage.php:71
+msgid "Sent"
+msgstr ""
+
+#: src/Admin/ReportsPage.php:72
+msgid "Draft"
+msgstr ""
+
+#: src/Admin/ReportsPage.php:84
+#: src/Admin/ReportsPage.php:165
+msgid "Report not found."
+msgstr ""
+
+#: src/Admin/ReportsPage.php:90
+msgid "All reports"
+msgstr ""
+
+#: src/Admin/ReportsPage.php:105
+msgid "Preview / print (PDF via browser)"
+msgstr ""
+
+#: src/Admin/ReportsPage.php:108
+msgid "Send this report to the configured client recipients?"
+msgstr ""
+
+#: src/Admin/ReportsPage.php:194
+msgid "Client reports are an Aftercare Pro feature."
+msgstr ""
+
+#: src/Admin/SettingsPage.php:31
+msgid "Vitals collection"
+msgstr ""
+
+#: src/Admin/SettingsPage.php:34
+msgid "Google API key (CrUX)"
+msgstr ""
+
+#: src/Admin/SettingsPage.php:36
+msgid "Your own key for the Chrome UX Report API. Create one in the <a href=\"https://console.cloud.google.com/apis/library/chromeuxreport.googleapis.com\" target=\"_blank\" rel=\"noopener\">Google Cloud Console</a> (free tier is plenty). Aftercare only calls Google with your key — nothing is sent anywhere else."
+msgstr ""
+
+#: src/Admin/SettingsPage.php:39
+msgid "Tracked URLs"
+msgstr ""
+
+#. translators: 1: homepage URL, 2: URL limit
+#: src/Admin/SettingsPage.php:44
+#, php-format
+msgid "One per line. The homepage (%1$s) is always tracked. Free monitors up to %2$d extra URLs; Pro is unlimited."
+msgstr ""
+
+#: src/Admin/SettingsPage.php:50
+msgid "Real-user monitoring"
+msgstr ""
+
+#: src/Admin/SettingsPage.php:51
+msgid "Load the RUM beacon (~2 KB) for a sample of visitors and record field vitals from real visits"
+msgstr ""
+
+#: src/Admin/SettingsPage.php:52
+msgid "Sample rate (% of visits):"
+msgstr ""
+
+#: src/Admin/SettingsPage.php:58
+msgid "Performance budgets"
+msgstr ""
+
+#: src/Admin/SettingsPage.php:59
+msgid "A daily p75 above budget, or 20% worse than the 28-day baseline, opens an incident."
+msgstr ""
+
+#: src/Admin/SettingsPage.php:62
+msgid "LCP budget (ms)"
+msgstr ""
+
+#: src/Admin/SettingsPage.php:63
+msgid "INP budget (ms)"
+msgstr ""
+
+#: src/Admin/SettingsPage.php:64
+msgid "CLS budget (score)"
+msgstr ""
+
+#: src/Admin/SettingsPage.php:65
+msgid "TTFB budget (ms)"
+msgstr ""
+
+#: src/Admin/SettingsPage.php:75
+msgid "Notifications"
+msgstr ""
+
+#: src/Admin/SettingsPage.php:78
+msgid "Alert email"
+msgstr ""
+
+#: src/Admin/SettingsPage.php:80
+msgid "New incidents and the weekly digest are emailed here."
+msgstr ""
+
+#: src/Admin/SettingsPage.php:83
+msgid "Weekly digest"
+msgstr ""
+
+#: src/Admin/SettingsPage.php:84
+msgid "Send a weekly summary email: vitals status, changes made and incidents from the past 7 days"
+msgstr ""
+
+#: src/Admin/SettingsPage.php:88
+msgid "Pro"
+msgstr ""
+
+#: src/Admin/SettingsPage.php:90
+msgid "Slack webhook URL"
+msgstr ""
+
+#: src/Admin/SettingsPage.php:94
+msgid "Generic webhook URL"
+msgstr ""
+
+#: src/Admin/SettingsPage.php:96
+msgid "Incidents are POSTed as JSON."
+msgstr ""
+
+#: src/Admin/SettingsPage.php:101
+msgid "Client reports & branding"
+msgstr ""
+
+#: src/Admin/SettingsPage.php:104
+msgid "Client recipients"
+msgstr ""
+
+#: src/Admin/SettingsPage.php:106
+msgid "Comma-separated email addresses that receive the monthly report."
+msgstr ""
+
+#: src/Admin/SettingsPage.php:110
+msgid "Logo URL"
+msgstr ""
+
+#: src/Admin/SettingsPage.php:113
+msgid "Accent colour"
+msgstr ""
+
+#: src/Admin/SettingsPage.php:116
+msgid "Report footer text"
+msgstr ""
+
+#: src/Admin/SettingsPage.php:119
+msgid "Sender name"
+msgstr ""
+
+#: src/Admin/SettingsPage.php:122
+msgid "Reply-to address"
+msgstr ""
+
+#: src/Admin/SettingsPage.php:128
+msgid "Data"
+msgstr ""
+
+#: src/Admin/SettingsPage.php:130
+msgid "Retention"
+msgstr ""
+
+#: src/Admin/SettingsPage.php:132
+msgid "Pro: 13 months of vitals history, unlimited ledger."
+msgstr ""
+
+#: src/Admin/SettingsPage.php:134
+msgid "Free: 30 days of vitals history, 90 days of ledger. Pro extends this to 13 months and unlimited."
+msgstr ""
+
+#: src/Admin/SettingsPage.php:137
+msgid "Uninstall"
+msgstr ""
+
+#: src/Admin/SettingsPage.php:138
+msgid "Keep Aftercare data (tables and settings) when the plugin is deleted"
+msgstr ""
+
+#: src/Admin/SettingsPage.php:144
+msgid "Aftercare Pro"
+msgstr ""
+
+#: src/Admin/SettingsPage.php:144
+msgid "cause attribution, white-label client reports, Slack & webhooks, unlimited URLs and 13-month history."
+msgstr ""
+
+#: src/Admin/SettingsPage.php:145
+msgid "See plans"
+msgstr ""
+
+#: src/Admin/SiteHealth.php:28
+msgid "Aftercare can collect Core Web Vitals"
+msgstr ""
+
+#: src/Admin/SiteHealth.php:32
+#: src/Admin/SiteHealth.php:72
+msgid "Aftercare daily checks are running"
+msgstr ""
+
+#: src/Admin/SiteHealth.php:36
+msgid "Site performance is within budget"
+msgstr ""
+
+#: src/Admin/SiteHealth.php:51
+msgid "Aftercare has a Google API key and can pull Core Web Vitals"
+msgstr ""
+
+#: src/Admin/SiteHealth.php:52
+msgid "Aftercare has no Google API key configured"
+msgstr ""
+
+#: src/Admin/SiteHealth.php:54
+msgid "Daily p75 vitals are collected from the Chrome UX Report."
+msgstr ""
+
+#: src/Admin/SiteHealth.php:55
+msgid "Without a Chrome UX Report API key, Aftercare cannot collect Core Web Vitals or detect regressions. The key is free."
+msgstr ""
+
+#. translators: %s: human time diff
+#: src/Admin/SiteHealth.php:75
+#, php-format
+msgid "The daily vitals pull and breach detection last ran %s ago."
+msgstr ""
+
+#: src/Admin/SiteHealth.php:85
+msgid "Aftercare daily checks have not run yet"
+msgstr ""
+
+#: src/Admin/SiteHealth.php:86
+msgid "Aftercare daily checks look stalled"
+msgstr ""
+
+#: src/Admin/SiteHealth.php:87
+msgid "Vitals collection and breach detection run via WP-Cron (or Action Scheduler when available). If this persists, configure a real server cron job that calls wp-cron.php, or run the checks manually from the Aftercare dashboard."
+msgstr ""
+
+#: src/Admin/SiteHealth.php:101
+msgid "No open performance incidents"
+msgstr ""
+
+#: src/Admin/SiteHealth.php:102
+msgid "All monitored Core Web Vitals are within their performance budgets."
+msgstr ""
+
+#. translators: %d: number of open incidents
+#: src/Admin/SiteHealth.php:110
+#, php-format
+msgid "%d performance budget is currently breached"
+msgid_plural "%d performance budgets are currently breached"
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""
+
+#: src/Admin/SiteHealth.php:113
+msgid "One or more Core Web Vitals metrics regressed past their budget or baseline. Open the incident to see every site change from the 72 hours before the regression."
+msgstr ""
+
+#: src/Admin/SiteHealth.php:126
+msgid "Performance"
+msgstr ""
+
+#: src/Admin/SiteHealth.php:136
+msgid "Open Aftercare Settings"
+msgstr ""
+
+#: src/Admin/SiteHealth.php:140
+msgid "Open the Aftercare dashboard"
+msgstr ""
+
+#: src/Core/Cron.php:133
+msgid "Aftercare:"
+msgstr ""
+
+#: src/Core/Cron.php:134
+msgid "WP-Cron does not appear to be running reliably on this site, so daily vitals collection and breach detection may be delayed. Configure a real server cron job that calls wp-cron.php, or install a plugin that provides Action Scheduler."
+msgstr ""
+
+#: src/Core/Privacy.php:21
+msgid "This site uses Aftercare to monitor page performance. When real-user monitoring is enabled, a small script measures anonymous performance timings (such as page load and layout stability) for a sample of visits and stores aggregated daily values on this website. No cookies are set, and no personal data, IP addresses or identifiers are collected or transmitted to third parties."
+msgstr ""
+
+#: src/Core/Privacy.php:22
+msgid "Aggregate Core Web Vitals statistics for this site are also retrieved from Google's Chrome UX Report, a public dataset of real-user experience data."
+msgstr ""
+
+#: src/Incidents/Attribution.php:61
+msgid "External factor likely (hosting, traffic spike or a third-party service). No site changes were recorded in the 72 hours before the regression."
+msgstr ""
+
+#. translators: 1: plugin name, 2: old version, 3: new version
+#: src/Ledger/Listeners.php:92
+#, php-format
+msgid "%1$s updated %2$s to %3$s"
+msgstr ""
+
+#. translators: 1: plugin name, 2: version
+#: src/Ledger/Listeners.php:94
+#, php-format
+msgid "%1$s updated to %2$s"
+msgstr ""
+
+#. translators: 1: theme name, 2: version
+#: src/Ledger/Listeners.php:118
+#, php-format
+msgid "Theme %1$s updated to %2$s"
+msgstr ""
+
+#. translators: %s: plugin name
+#: src/Ledger/Listeners.php:132
+#, php-format
+msgid "Plugin activated: %s"
+msgstr ""
+
+#. translators: %s: plugin name
+#: src/Ledger/Listeners.php:141
+#, php-format
+msgid "Plugin deactivated: %s"
+msgstr ""
+
+#. translators: 1: old theme, 2: new theme
+#: src/Ledger/Listeners.php:155
+#, php-format
+msgid "Theme switched from %1$s to %2$s"
+msgstr ""
+
+#. translators: %s: WordPress version
+#: src/Ledger/Listeners.php:167
+#, php-format
+msgid "WordPress core updated to %s"
+msgstr ""
+
+#. translators: %s: option name
+#: src/Ledger/Listeners.php:184
+#, php-format
+msgid "Setting changed: %s"
+msgstr ""
+
+#. translators: 1: post type label, 2: post title
+#: src/Ledger/Listeners.php:209
+#, php-format
+msgid "%1$s published: %2$s"
+msgstr ""
+
+#. translators: 1: user login, 2: role list
+#: src/Ledger/Listeners.php:223
+#, php-format
+msgid "User created: %1$s (%2$s)"
+msgstr ""
+
+#. translators: 1: site name, 2: metric
+#: src/Notifications/Emailer.php:34
+#, php-format
+msgid "[%1$s] Performance regression detected: %2$s"
+msgstr ""
+
+#. translators: 1: site name, 2: metric, 3: breach value, 4: budget value, 5: URL
+#: src/Notifications/Slack.php:29
+#, php-format
+msgid ":rotating_light: %1$s — %2$s regression: %3$s (budget %4$s) on %5$s"
+msgstr ""
+
+#. translators: 1: site name, 2: metric, 3: URL
+#: src/Notifications/Slack.php:48
+#, php-format
+msgid ":white_check_mark: %1$s — %2$s recovered on %3$s"
+msgstr ""
+
+#. translators: %s: site name
+#: src/Notifications/WeeklyDigest.php:46
+#, php-format
+msgid "[%s] Weekly site care digest"
+msgstr ""
+
+#. translators: 1: site name, 2: month name, 3: year
+#: src/Reports/Builder.php:112
+#, php-format
+msgid "%1$s — site care report for %2$s %3$s"
+msgstr ""
+
+#. translators: %s: site name
+#: templates/email-digest.php:36
+#, php-format
+msgid "%s — weekly site care digest"
+msgstr ""
+
+#: templates/email-digest.php:61
+msgid "Changes this week"
+msgstr ""
+
+#: templates/email-digest.php:63
+msgid "No changes were recorded this week."
+msgstr ""
+
+#: templates/email-digest.php:75
+msgid "Incidents this week"
+msgstr ""
+
+#: templates/email-digest.php:77
+msgid "No performance regressions this week."
+msgstr ""
+
+#: templates/email-digest.php:96
+msgid "You receive this weekly digest because Aftercare is active on your site. Disable it under Aftercare → Settings → Notifications."
+msgstr ""
+
+#: templates/email-incident.php:19
+msgid "n/a"
+msgstr ""
+
+#. translators: 1: metric, 2: URL, 3: site name
+#: templates/email-incident.php:30
+#, php-format
+msgid "%1$s breached its performance budget on %2$s (%3$s)."
+msgstr ""
+
+#: templates/email-incident.php:59
+msgid "Sent by Aftercare. The incident page lists every site change from the 72 hours before the regression."
+msgstr ""
+
+#: templates/report-default.php:54
+msgid "Use your browser's Print dialog to save this report as a PDF."
+msgstr ""
+
+#. translators: %s: month and year
+#: templates/report-default.php:63
+#, php-format
+msgid "Site care report — %s"
+msgstr ""
+
+#: templates/report-default.php:82
+msgid "This month (avg p75)"
+msgstr ""
+
+#: templates/report-default.php:83
+msgid "Previous month"
+msgstr ""
+
+#: templates/report-default.php:84
+msgid "Change"
+msgstr ""
+
+#. translators: %s: URL
+#: templates/report-default.php:115
+#, php-format
+msgid "Field data (p75) for %s. Lower is better."
+msgstr ""
+
+#: templates/report-default.php:129
+msgid "Peak"
+msgstr ""
