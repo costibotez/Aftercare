@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class IncidentsPage {
 
 	public function render(): void {
-		$incident_id = (int) ( $_GET['incident'] ?? 0 ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$incident_id = isset( $_GET['incident'] ) ? absint( wp_unslash( $_GET['incident'] ) ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only view.
 		if ( $incident_id > 0 ) {
 			$this->render_detail( $incident_id );
 			return;
@@ -191,7 +191,8 @@ final class IncidentsPage {
 		if ( ! current_user_can( Menu::CAP ) ) {
 			wp_die( esc_html__( 'You do not have permission to do that.', 'aftercare' ) );
 		}
-		$id = (int) ( $_POST['incident'] ?? 0 );
+		// The incident ID is part of the nonce action, so it must be read first.
+		$id = isset( $_POST['incident'] ) ? absint( wp_unslash( $_POST['incident'] ) ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Missing -- verified on the next line.
 		check_admin_referer( 'aftercare_incident_status_' . $id );
 
 		$status = sanitize_key( wp_unslash( $_POST['status'] ?? '' ) );

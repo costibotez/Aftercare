@@ -45,7 +45,7 @@ final class LedgerPage {
 	public function render(): void {
 		$ledger  = new LedgerRepository();
 		$filters = $this->current_filters();
-		$page    = max( 1, (int) ( $_GET['paged'] ?? 1 ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$page    = isset( $_GET['paged'] ) ? max( 1, absint( wp_unslash( $_GET['paged'] ) ) ) : 1; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only pagination.
 
 		$events = $ledger->query( $filters, self::PER_PAGE, $page );
 		$total  = $ledger->count( $filters );

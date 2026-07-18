@@ -23,8 +23,9 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 final class Cron {
 
-	public const DAILY_HOOK    = 'aftercare_daily_tasks';
-	public const LAST_RUN_OPT  = 'aftercare_cron_last_run';
+	public const DAILY_HOOK   = 'aftercare_daily_tasks';
+	public const WEEKLY_HOOK  = 'aftercare_weekly_digest';
+	public const LAST_RUN_OPT = 'aftercare_cron_last_run';
 
 	public function register(): void {
 		add_action( self::DAILY_HOOK, array( $this, 'run_daily' ) );
@@ -37,29 +38,38 @@ final class Cron {
 	}
 
 	public static function schedule(): void {
-		if ( self::uses_action_scheduler() ) {
-			if ( false === as_next_scheduled_action( self::DAILY_HOOK ) ) {
-				as_schedule_recurring_action( time() + HOUR_IN_SECONDS, DAY_IN_SECONDS, self::DAILY_HOOK, array(), 'aftercare' );
+		$hooks = array(
+			self::DAILY_HOOK  => array( DAY_IN_SECONDS, 'daily' ),
+			self::WEEKLY_HOOK => array( WEEK_IN_SECONDS, 'weekly' ),
+		);
+		foreach ( $hooks as $hook => [ $interval, $recurrence ] ) {
+			if ( self::uses_action_scheduler() ) {
+				if ( false === as_next_scheduled_action( $hook ) ) {
+					as_schedule_recurring_action( time() + HOUR_IN_SECONDS, $interval, $hook, array(), 'aftercare' );
+				}
+			} elseif ( ! wp_next_scheduled( $hook ) ) {
+				wp_schedule_event( time() + HOUR_IN_SECONDS, $recurrence, $hook );
 			}
-			return;
-		}
-		if ( ! wp_next_scheduled( self::DAILY_HOOK ) ) {
-			wp_schedule_event( time() + HOUR_IN_SECONDS, 'daily', self::DAILY_HOOK );
 		}
 	}
 
 	public static function unschedule(): void {
-		if ( self::uses_action_scheduler() ) {
-			as_unschedule_all_actions( self::DAILY_HOOK, array(), 'aftercare' );
+		foreach ( array( self::DAILY_HOOK, self::WEEKLY_HOOK ) as $hook ) {
+			if ( self::uses_action_scheduler() ) {
+				as_unschedule_all_actions( $hook, array(), 'aftercare' );
+			}
+			wp_clear_scheduled_hook( $hook );
 		}
-		wp_clear_scheduled_hook( self::DAILY_HOOK );
 	}
 
 	private static function is_scheduled(): bool {
-		if ( self::uses_action_scheduler() ) {
-			return false !== as_next_scheduled_action( self::DAILY_HOOK );
+		foreach ( array( self::DAILY_HOOK, self::WEEKLY_HOOK ) as $hook ) {
+			$next = self::uses_action_scheduler() ? false !== as_next_scheduled_action( $hook ) : (bool) wp_next_scheduled( $hook );
+			if ( ! $next ) {
+				return false;
+			}
 		}
-		return (bool) wp_next_scheduled( self::DAILY_HOOK );
+		return true;
 	}
 
 	private static function uses_action_scheduler(): bool {
@@ -89,8 +99,10 @@ final class Cron {
 			( new LedgerRepository() )->prune( $ledger_days );
 		}
 
-		// 5. Keep the plugin version snapshot fresh for update attribution.
+		// 5. Keep the plugin version snapshot fresh for update attribution,
+		//    and refresh the cached status snapshot (admin bar, widget).
 		Listeners::snapshot_plugin_versions();
+		\Aftercare\Vitals\Status::flush_cache();
 
 		// 6. Pro: draft last month's client report on the 1st of each month.
 		if ( License::is_pro() && '1' === gmdate( 'j' ) ) {
