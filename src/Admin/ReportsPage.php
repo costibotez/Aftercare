@@ -34,7 +34,7 @@ final class ReportsPage {
 			echo '<div class="notice notice-error is-dismissible"><p>' . esc_html__( 'Sending failed. Check that client recipients are configured in Settings and that the site can send email.', 'aftercare' ) . '</p></div>';
 		}
 
-		$report_id = (int) ( $_GET['report'] ?? 0 ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$report_id = isset( $_GET['report'] ) ? absint( wp_unslash( $_GET['report'] ) ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only view.
 		if ( $report_id > 0 ) {
 			$this->render_editor( $report_id );
 			Menu::footer();
@@ -118,7 +118,7 @@ final class ReportsPage {
 	public static function handle_generate(): void {
 		self::guard( 'aftercare_report_generate' );
 
-		$period = sanitize_key( wp_unslash( $_POST['period'] ?? 'previous' ) );
+		$period = isset( $_POST['period'] ) ? sanitize_key( wp_unslash( $_POST['period'] ) ) : 'previous'; // phpcs:ignore WordPress.Security.NonceVerification.Missing -- verified in guard().
 		$ts     = 'current' === $period ? time() : strtotime( 'first day of last month' );
 		$id     = ( new Builder() )->generate_draft( (int) gmdate( 'n', $ts ), (int) gmdate( 'Y', $ts ) );
 
@@ -127,16 +127,19 @@ final class ReportsPage {
 	}
 
 	public static function handle_note(): void {
-		$id = (int) ( $_POST['report'] ?? 0 );
+		// The report ID is part of the nonce action, so it must be read first.
+		$id = isset( $_POST['report'] ) ? absint( wp_unslash( $_POST['report'] ) ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Missing -- verified in guard().
 		self::guard( 'aftercare_report_note_' . $id );
 
-		( new ReportRepository() )->set_personal_note( $id, sanitize_textarea_field( wp_unslash( $_POST['personal_note'] ?? '' ) ) );
+		$note = isset( $_POST['personal_note'] ) ? sanitize_textarea_field( wp_unslash( $_POST['personal_note'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Missing -- verified in guard().
+		( new ReportRepository() )->set_personal_note( $id, $note );
 		wp_safe_redirect( admin_url( 'admin.php?page=aftercare-reports&report=' . $id ) );
 		exit;
 	}
 
 	public static function handle_send(): void {
-		$id = (int) ( $_POST['report'] ?? 0 );
+		// The report ID is part of the nonce action, so it must be read first.
+		$id = isset( $_POST['report'] ) ? absint( wp_unslash( $_POST['report'] ) ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Missing -- verified in guard().
 		self::guard( 'aftercare_report_send_' . $id );
 
 		$repo   = new ReportRepository();
@@ -153,7 +156,8 @@ final class ReportsPage {
 	 * instead; otherwise the print stylesheet + browser print covers PDF.
 	 */
 	public static function handle_preview(): void {
-		$id = (int) ( $_GET['report'] ?? 0 );
+		// The report ID is part of the nonce action, so it must be read first.
+		$id = isset( $_GET['report'] ) ? absint( wp_unslash( $_GET['report'] ) ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- verified in guard().
 		self::guard( 'aftercare_report_preview_' . $id, false );
 
 		$report = ( new ReportRepository() )->find( $id );
