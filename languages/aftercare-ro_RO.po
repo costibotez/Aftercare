@@ -1,0 +1,211 @@
+# Romanian translation for Aftercare.
+msgid ""
+msgstr ""
+"Project-Id-Version: Aftercare 1.0.0\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: ro_RO\n"
+"Plural-Forms: nplurals=3; plural=(n==1 ? 0 : (n==0 || (n%100>0 && n%100<20)) ? 1 : 2);\n"
+"X-Domain: aftercare\n"
+
+msgid "Aftercare"
+msgstr "Aftercare"
+
+msgid "Dashboard"
+msgstr "Panou de control"
+
+msgid "Ledger"
+msgstr "Registru"
+
+msgid "Change Ledger"
+msgstr "Registrul modificărilor"
+
+msgid "Incidents"
+msgstr "Incidente"
+
+msgid "Reports"
+msgstr "Rapoarte"
+
+msgid "Client Reports"
+msgstr "Rapoarte pentru clienți"
+
+msgid "Settings"
+msgstr "Setări"
+
+msgid "Aftercare Settings"
+msgstr "Setări Aftercare"
+
+msgid "Settings saved."
+msgstr "Setările au fost salvate."
+
+msgid "Save settings"
+msgstr "Salvează setările"
+
+msgid "Pass"
+msgstr "Trecut"
+
+msgid "Warn"
+msgstr "Avertisment"
+
+msgid "Fail"
+msgstr "Eșuat"
+
+msgid "No data"
+msgstr "Fără date"
+
+msgid "Open"
+msgstr "Deschis"
+
+msgid "Acknowledged"
+msgstr "Confirmat"
+
+msgid "Resolved"
+msgstr "Rezolvat"
+
+msgid "Dismissed"
+msgstr "Respins"
+
+msgid "Acknowledge"
+msgstr "Confirmă"
+
+msgid "Mark resolved"
+msgstr "Marchează ca rezolvat"
+
+msgid "Dismiss"
+msgstr "Respinge"
+
+msgid "Details"
+msgstr "Detalii"
+
+msgid "Incident detail"
+msgstr "Detalii incident"
+
+msgid "All incidents"
+msgstr "Toate incidentele"
+
+msgid "View incidents"
+msgstr "Vezi incidentele"
+
+msgid "Metric"
+msgstr "Metrică"
+
+msgid "URL"
+msgstr "URL"
+
+msgid "Breach"
+msgstr "Depășire"
+
+msgid "Budget"
+msgstr "Buget"
+
+msgid "Baseline"
+msgstr "Referință"
+
+msgid "Status"
+msgstr "Stare"
+
+msgid "Opened"
+msgstr "Deschis la"
+
+msgid "Probable cause"
+msgstr "Cauză probabilă"
+
+msgid "High confidence"
+msgstr "Încredere ridicată"
+
+msgid "Medium confidence"
+msgstr "Încredere medie"
+
+msgid "Low confidence"
+msgstr "Încredere scăzută"
+
+msgid "Upgrade to Pro"
+msgstr "Treci la Pro"
+
+msgid "Recent changes"
+msgstr "Modificări recente"
+
+msgid "Full ledger"
+msgstr "Registrul complet"
+
+msgid "Filter"
+msgstr "Filtrează"
+
+msgid "Export CSV"
+msgstr "Exportă CSV"
+
+msgid "All event types"
+msgstr "Toate tipurile de evenimente"
+
+msgid "Plugin update"
+msgstr "Actualizare modul"
+
+msgid "Plugin activated"
+msgstr "Modul activat"
+
+msgid "Plugin deactivated"
+msgstr "Modul dezactivat"
+
+msgid "Theme update"
+msgstr "Actualizare temă"
+
+msgid "Theme switch"
+msgstr "Schimbare temă"
+
+msgid "Core update"
+msgstr "Actualizare WordPress"
+
+msgid "Settings change"
+msgstr "Modificare setări"
+
+msgid "Content published"
+msgstr "Conținut publicat"
+
+msgid "User created"
+msgstr "Utilizator creat"
+
+msgid "Performance regression detected"
+msgstr "Regresie de performanță detectată"
+
+msgid "Measured p75"
+msgstr "p75 măsurat"
+
+msgid "28-day baseline"
+msgstr "Referință pe 28 de zile"
+
+msgid "View incident and recent changes"
+msgstr "Vezi incidentul și modificările recente"
+
+msgid "Send to client"
+msgstr "Trimite clientului"
+
+msgid "Save note"
+msgstr "Salvează nota"
+
+msgid "Personal note to the client"
+msgstr "Notă personală pentru client"
+
+msgid "Generate draft for last month"
+msgstr "Generează ciornă pentru luna trecută"
+
+msgid "Core Web Vitals"
+msgstr "Core Web Vitals"
+
+msgid "Work performed this month"
+msgstr "Lucrări efectuate luna aceasta"
+
+msgid "Regressions caught this month"
+msgstr "Regresii detectate luna aceasta"
+
+msgid "No performance regressions were detected. All metrics stayed within budget."
+msgstr "Nu au fost detectate regresii de performanță. Toate metricile s-au încadrat în buget."
+
+msgid "No changes were recorded this month."
+msgstr "Nu au fost înregistrate modificări luna aceasta."
+
+msgid "Run daily checks now"
+msgstr "Rulează verificările zilnice acum"
+
+msgid "You do not have permission to do that."
+msgstr "Nu ai permisiunea de a face asta."
