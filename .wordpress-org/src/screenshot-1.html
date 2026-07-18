@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="wp-base.css">
+<link rel="stylesheet" href="../../assets/css/admin.css">
+</head>
+<body>
+<div class="wrap aftercare-wrap">
+	<h1>Aftercare — Dashboard</h1>
+	<p class="aftercare-subtle">Monitoring https://example-client.co.uk/ (p75, field data)</p>
+
+	<div class="aftercare-cards">
+		<div class="aftercare-card">
+			<div class="aftercare-card-head"><span class="aftercare-metric-name">LCP</span><span class="aftercare-pill aftercare-pill-pass">Pass</span></div>
+			<div class="aftercare-card-value">2.14 s</div>
+			<div class="aftercare-card-budget">Budget 2.50 s</div>
+			<div class="aftercare-sparkline" data-sparkline="[2310,2260,2290,2180,2240,2200,2150,2230,2190,2120,2170,2210,2140,2100,2160,2190,2130,2080,2150,2110,2170,2090,2140,2180,2120,2060,2100,2150,2090,2140]" data-budget="2500"></div>
+		</div>
+		<div class="aftercare-card">
+			<div class="aftercare-card-head"><span class="aftercare-metric-name">INP</span><span class="aftercare-pill aftercare-pill-pass">Pass</span></div>
+			<div class="aftercare-card-value">168 ms</div>
+			<div class="aftercare-card-budget">Budget 200 ms</div>
+			<div class="aftercare-sparkline" data-sparkline="[182,176,171,179,168,174,166,172,177,169,163,175,170,164,172,168,161,169,173,166,159,167,171,164,170,162,168,165,160,168]" data-budget="200"></div>
+		</div>
+		<div class="aftercare-card">
+			<div class="aftercare-card-head"><span class="aftercare-metric-name">CLS</span><span class="aftercare-pill aftercare-pill-fail">Fail</span></div>
+			<div class="aftercare-card-value">0.214</div>
+			<div class="aftercare-card-budget">Budget 0.100</div>
+			<div class="aftercare-sparkline" data-sparkline="[0.05,0.06,0.05,0.07,0.05,0.06,0.05,0.05,0.06,0.05,0.07,0.06,0.05,0.06,0.05,0.06,0.05,0.07,0.05,0.06,0.05,0.06,0.13,0.18,0.2,0.19,0.22,0.21,0.2,0.214]" data-budget="0.1"></div>
+		</div>
+		<div class="aftercare-card">
+			<div class="aftercare-card-head"><span class="aftercare-metric-name">TTFB</span><span class="aftercare-pill aftercare-pill-pass">Pass</span></div>
+			<div class="aftercare-card-value">0.62 s</div>
+			<div class="aftercare-card-budget">Budget 0.80 s</div>
+			<div class="aftercare-sparkline" data-sparkline="[680,672,690,655,668,674,650,662,671,645,659,666,640,652,663,648,637,655,644,658,635,649,641,653,632,646,638,650,629,624]" data-budget="800"></div>
+		</div>
+	</div>
+
+	<div class="aftercare-columns">
+		<div class="aftercare-panel">
+			<h2>Incidents</h2>
+			<p class="aftercare-incident-count aftercare-fail">1 open incident needs attention.</p>
+			<p><a class="button" href="#">View incidents</a></p>
+			<h2>Maintenance</h2>
+			<a class="button" href="#">Run daily checks now</a>
+		</div>
+		<div class="aftercare-panel">
+			<h2>Recent changes</h2>
+			<ul class="aftercare-timeline">
+				<li class="aftercare-event"><span class="dashicons"></span> <span class="aftercare-event-summary">WP Rocket updated 3.15.4 to 3.16.1</span><span class="aftercare-event-meta">by admin · 3 hours ago</span></li>
+				<li class="aftercare-event"><span class="dashicons"></span> <span class="aftercare-event-summary">Page published: Summer Offer Landing</span><span class="aftercare-event-meta">by editor · 7 hours ago</span></li>
+				<li class="aftercare-event"><span class="dashicons"></span> <span class="aftercare-event-summary">Plugin activated: Smash Balloon Instagram Feed</span><span class="aftercare-event-meta">by admin · 1 day ago</span></li>
+				<li class="aftercare-event"><span class="dashicons"></span> <span class="aftercare-event-summary">Setting changed: permalink_structure</span><span class="aftercare-event-meta">by admin · 2 days ago</span></li>
+				<li class="aftercare-event"><span class="dashicons"></span> <span class="aftercare-event-summary">WordPress core updated to 7.0.2</span><span class="aftercare-event-meta">by system (cron) · 3 days ago</span></li>
+			</ul>
+			<p><a class="button" href="#">Full ledger</a></p>
+		</div>
+	</div>
+</div>
+<script src="../../assets/js/admin.js"></script>
+</body>
+</html>

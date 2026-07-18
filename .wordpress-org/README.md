@@ -14,13 +14,18 @@ looks in the directory listing.
 
 ## Screenshots
 
-Save your admin screenshots here with these exact names (PNG, ideally at
-default browser zoom on a ~1440px-wide window):
+The committed `screenshot-1..4.png` are rendered from the mockups in `src/`
+(they use the plugin's real admin CSS and sparkline renderer with
+representative data):
 
 1. `screenshot-1.png` — Aftercare Dashboard (vitals cards, incidents, recent changes)
 2. `screenshot-2.png` — Change Ledger timeline
-3. `screenshot-3.png` — Incidents screen
+3. `screenshot-3.png` — Incident detail with attribution and the 72-hour window
 4. `screenshot-4.png` — Settings screen
+
+To use real captures instead, overwrite these files with exports from a live
+install (PNG, default browser zoom, ~1280px-wide window) keeping the same
+names.
 
 ## Regenerating the banner/icon
 
