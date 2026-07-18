@@ -100,7 +100,7 @@ By default all Aftercare tables and options are removed on uninstall. Tick "Keep
 
 1. Dashboard — vitals cards with budgets, status pills, sparklines, incidents and recent changes
 2. Change ledger — filterable timeline of every site change
-3. Incidents — regressions tracked with breach value, budget and baseline
+3. Incident detail — breach versus budget and baseline, with the changes from the 72 hours before (ranked cause attribution shown is a Pro feature)
 4. Settings — API key, tracked URLs, performance budgets and notifications
 
 = Can I run the checks from a server cron instead of WP-Cron? =

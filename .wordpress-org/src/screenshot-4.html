@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="wp-base.css">
+<link rel="stylesheet" href="../../assets/css/admin.css">
+</head>
+<body>
+<div class="wrap aftercare-wrap">
+	<h1>Aftercare Settings</h1>
+
+	<h2>Vitals collection</h2>
+	<table class="form-table">
+		<tr><th>Google API key (CrUX)</th><td>
+			<input type="password" class="regular-text" value="••••••••••••••••••••••••••••••••••••">
+			<p class="description">Your own key for the Chrome UX Report API. Create one in the <a href="#">Google Cloud Console</a> (free tier is plenty). Aftercare only calls Google with your key — nothing is sent anywhere else.</p>
+		</td></tr>
+		<tr><th>Tracked URLs</th><td>
+			<textarea class="large-text code" rows="4">https://example-client.co.uk/pricing/
+https://example-client.co.uk/contact/</textarea>
+			<p class="description">One per line. The homepage (https://example-client.co.uk/) is always tracked. Free monitors up to 5 extra URLs; Pro is unlimited.</p>
+		</td></tr>
+		<tr><th>Real-user monitoring</th><td>
+			<label><input type="checkbox" checked> Load the RUM beacon (~2 KB) for a sample of visitors and record field vitals from real visits</label>
+			<p><label>Sample rate (% of visits): </label><input type="number" class="small-text" value="10"></p>
+		</td></tr>
+	</table>
+
+	<h2>Performance budgets</h2>
+	<p class="description">A daily p75 above budget, or 20% worse than the 28-day baseline, opens an incident.</p>
+	<table class="form-table">
+		<tr><th>LCP budget (ms)</th><td><input type="number" class="regular-text" value="2500"></td></tr>
+		<tr><th>INP budget (ms)</th><td><input type="number" class="regular-text" value="200"></td></tr>
+		<tr><th>CLS budget (score)</th><td><input type="number" class="regular-text" value="0.1"></td></tr>
+		<tr><th>TTFB budget (ms)</th><td><input type="number" class="regular-text" value="800"></td></tr>
+	</table>
+
+	<h2>Notifications</h2>
+	<table class="form-table">
+		<tr><th>Alert email</th><td>
+			<input type="email" class="regular-text" value="studio@example-agency.co.uk">
+			<p class="description">New incidents and the weekly digest are emailed here.</p>
+		</td></tr>
+		<tr><th>Weekly digest</th><td>
+			<label><input type="checkbox" checked> Send a weekly summary email: vitals status, changes made and incidents from the past 7 days</label>
+		</td></tr>
+	</table>
+
+	<p><a class="button button-primary" href="#">Save settings</a></p>
+</div>
+</body>
+</html>
