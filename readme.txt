@@ -8,28 +8,52 @@ Stable tag: 1.0.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Performance accountability for agencies. Watch Core Web Vitals, record every site change, catch regressions before the client does.
+Daily Core Web Vitals monitoring, a complete change ledger and performance regression alerts. Catch problems before your visitors do.
 
 == Description ==
 
-Aftercare is built for agencies and freelancers who maintain client WordPress sites on monthly care plans. It answers the two questions every retainer client eventually asks: *"what did you actually do this month?"* and *"why did the site get slower?"*
+**Know what changed. Know what it cost. Prove what you did.**
 
-**Vitals Monitor** — pulls daily p75 Core Web Vitals (LCP, INP, CLS, TTFB) from the Chrome UX Report using your own Google API key, optionally enriched by a lightweight (~2 KB) real-user monitoring beacon on a sampled fraction of visits. Set performance budgets per metric; a breach of budget or a 20% regression against the 28-day baseline opens an incident and emails you.
+Aftercare watches your WordPress site after launch. Every day it records your real-world Core Web Vitals; every second it records the changes made to the site. When performance regresses, it connects the two — an incident opens, an email goes out, and the incident page shows every change from the 72 hours before the regression, right next to the trend.
 
-**Change Ledger** — every plugin update, activation and deactivation, theme update and switch, core update, allow-listed settings change, content publish and new user is recorded with a human-readable summary and the responsible user. When something regresses, you can see exactly what changed in the 72 hours before.
+It is built for agencies and freelancers who maintain client sites on monthly care plans — and for any site owner who wants an answer to "why did the site just get slower?" that is based on data instead of guesswork.
 
-**Incidents** — regressions become trackable incidents with status (open, acknowledged, resolved, dismissed), the breach value, the budget and the baseline — plus the raw change timeline side by side.
+= 📈 Core Web Vitals monitor =
+
+* Daily p75 values for **LCP, INP, CLS and TTFB** from the Chrome UX Report — real field data from actual Chrome users, fetched with your own free Google API key
+* Optional **real-user monitoring beacon**: ~2 KB, no external libraries or services, loaded for a configurable sample of visits and aggregated to daily p75 on your own site
+* Homepage plus up to 5 tracked URLs, sparkline trends, pass / warn / fail status pills
+
+= 💰 Performance budgets and incidents =
+
+* Editable budgets per metric (defaults: LCP 2.5 s, INP 200 ms, CLS 0.1, TTFB 800 ms)
+* A daily p75 over budget — or 20% worse than your 28-day baseline — opens an incident and emails you
+* Incidents track status (open, acknowledged, resolved, dismissed) and resolve automatically when the metric recovers
+* Every incident shows the raw change timeline from the 72 hours before the breach
+
+= 📒 Change ledger =
+
+* Records plugin updates (old → new version), activations, deactivations, theme updates and switches, core updates, allow-listed settings changes, content publishes and new users
+* Human-readable entries with the responsible user: "WP Rocket updated 3.15 to 3.16 by admin"
+* Filterable timeline by type and date, 90 days of history
+
+= 🔒 Private by design =
+
+* No phoning home, no accounts, no external service. CrUX calls go straight from your server to Google with your key; RUM beacons post to your own site's REST API
+* Uninstall removes every table and option unless you choose to keep the data
 
 = Aftercare Pro =
 
-* **Cause attribution** — ranks every change from the 72 hours before a regression with confidence badges, so you fix the right thing first
-* **White-label client reports** — monthly drafts with vitals versus last month, work performed, incidents caught; your logo, colours and a personal note; print/PDF and email delivery
+The free plugin tells you *that* something regressed and *what changed*. Aftercare Pro tells you **which change probably did it**:
+
+* **Cause attribution** — ranks every change from the 72 hours before a regression with high / medium / low confidence badges, so you fix the right thing first
+* **White-label client reports** — monthly drafts with vitals versus last month, work performed, incidents caught and resolved; your logo, colours and a personal note; print/PDF and email delivery
 * **Slack and webhook notifications**
 * **Unlimited tracked URLs**, per-URL budgets, 13-month history, unlimited ledger retention and CSV export
 
 = Privacy =
 
-Aftercare does not phone home. CrUX data is fetched directly from Google's API using the key you provide. The optional RUM beacon posts anonymous metric values (no cookies, no IPs stored) to your own site's REST API.
+Aftercare does not phone home. CrUX data is fetched directly from Google's API using the key you provide. The optional RUM beacon posts anonymous metric values (no cookies, no personal data, no IPs stored) to your own site's REST API and can be disabled at any time.
 
 == Installation ==
 
