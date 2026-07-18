@@ -69,10 +69,8 @@ final class LedgerPage {
 		echo '<input type="date" name="to" value="' . esc_attr( $filters['to'] ?? '' ) . '" aria-label="' . esc_attr__( 'To date', 'aftercare' ) . '" />';
 		echo '<button class="button">' . esc_html__( 'Filter', 'aftercare' ) . '</button>';
 
-		if ( License::is_pro() ) {
-			$export_url = wp_nonce_url( admin_url( 'admin-post.php?action=aftercare_ledger_export' ), 'aftercare_ledger_export' );
-			echo ' <a class="button" href="' . esc_url( $export_url ) . '">' . esc_html__( 'Export CSV', 'aftercare' ) . '</a>';
-		}
+		$export_url = wp_nonce_url( admin_url( 'admin-post.php?action=aftercare_ledger_export' ), 'aftercare_ledger_export' );
+		echo ' <a class="button" href="' . esc_url( $export_url ) . '">' . esc_html__( 'Export CSV', 'aftercare' ) . '</a>';
 		echo '</form>';
 
 		if ( empty( $events ) ) {
@@ -102,7 +100,7 @@ final class LedgerPage {
 		}
 
 		if ( ! License::is_pro() ) {
-			echo '<p class="aftercare-subtle">' . esc_html__( 'Free keeps 90 days of history. Aftercare Pro keeps the ledger forever and adds CSV export.', 'aftercare' ) . '</p>';
+			echo '<p class="aftercare-subtle">' . esc_html__( 'Free keeps 90 days of history. Aftercare Pro keeps the ledger forever.', 'aftercare' ) . '</p>';
 		}
 
 		Menu::footer();
@@ -148,16 +146,13 @@ final class LedgerPage {
 	}
 
 	/**
-	 * Pro: stream the full ledger as CSV.
+	 * Stream the full ledger as CSV.
 	 */
 	public static function handle_export(): void {
 		if ( ! current_user_can( Menu::CAP ) ) {
 			wp_die( esc_html__( 'You do not have permission to do that.', 'aftercare' ) );
 		}
 		check_admin_referer( 'aftercare_ledger_export' );
-		if ( ! License::is_pro() ) {
-			wp_die( esc_html__( 'CSV export is an Aftercare Pro feature.', 'aftercare' ) );
-		}
 
 		$ledger = new LedgerRepository();
 		$events = $ledger->query( array(), 100000 );

@@ -17,7 +17,9 @@ final class ReportsPage {
 	public function render(): void {
 		Menu::header( __( 'Client Reports', 'aftercare' ) );
 
-		if ( ! License::is_pro() ) {
+		// The report builder ships only in the premium build; the free build
+		// shows what Pro offers (advertising is fine, locked code is not).
+		if ( ! License::is_pro() || ! class_exists( Builder::class ) ) {
 			echo '<div class="aftercare-upsell aftercare-panel">';
 			echo '<p><strong>' . esc_html__( 'Turn every month into proof of your work.', 'aftercare' ) . '</strong></p>';
 			echo '<p>' . esc_html__( 'Aftercare Pro drafts a white-label report per month: Core Web Vitals versus last month, every change you made, every regression caught and resolved — with your logo, your colours and a personal note. Print it, download it or email it straight to the client.', 'aftercare' ) . '</p>';
@@ -190,7 +192,7 @@ final class ReportsPage {
 			wp_die( esc_html__( 'You do not have permission to do that.', 'aftercare' ) );
 		}
 		check_admin_referer( $nonce_action );
-		if ( ! License::is_pro() ) {
+		if ( ! License::is_pro() || ! class_exists( Builder::class ) ) {
 			wp_die( esc_html__( 'Client reports are an Aftercare Pro feature.', 'aftercare' ) );
 		}
 	}

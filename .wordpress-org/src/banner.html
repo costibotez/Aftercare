@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+	* { margin: 0; padding: 0; box-sizing: border-box; }
+	html, body { width: 772px; height: 250px; overflow: hidden; }
+	body {
+		font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+		background: linear-gradient(120deg, #042f2e 0%, #0f766e 62%, #115e59 100%);
+		position: relative;
+		color: #fff;
+		display: flex;
+		align-items: center;
+	}
+	/* Subtle grid texture */
+	.grid {
+		position: absolute; inset: 0;
+		background-image:
+			linear-gradient(rgba(255,255,255,0.045) 1px, transparent 1px),
+			linear-gradient(90deg, rgba(255,255,255,0.045) 1px, transparent 1px);
+		background-size: 34px 34px;
+		mask-image: linear-gradient(to bottom, transparent, #000 30%, #000 70%, transparent);
+		-webkit-mask-image: linear-gradient(to bottom, transparent, #000 30%, #000 70%, transparent);
+	}
+	.left { position: relative; padding-left: 46px; width: 430px; }
+	.wordmark { font-size: 52px; font-weight: 800; letter-spacing: -1.5px; line-height: 1; }
+	.wordmark .dot { color: #fbbf24; }
+	.tagline { margin-top: 12px; font-size: 19px; font-weight: 600; color: #ccfbf1; letter-spacing: -0.2px; }
+	.features { margin-top: 12px; font-size: 13px; font-weight: 500; color: #99f6e4; opacity: 0.9; letter-spacing: 0.2px; }
+	.chart {
+		position: absolute; right: 34px; top: 32px;
+		width: 300px; height: 186px;
+		background: rgba(255,255,255,0.07);
+		border: 1px solid rgba(255,255,255,0.16);
+		border-radius: 12px;
+		padding: 16px 18px 10px;
+		backdrop-filter: blur(2px);
+	}
+	.chart-head { display: flex; justify-content: space-between; align-items: center; }
+	.chart-title { font-size: 13px; font-weight: 700; letter-spacing: 1.2px; color: #ccfbf1; }
+	.pill {
+		font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px;
+		background: #fee2e2; color: #b91c1c; border-radius: 999px; padding: 3px 10px;
+	}
+	svg { display: block; margin-top: 10px; }
+	.caption { margin-top: 8px; font-size: 11px; color: #99f6e4; opacity: 0.85; }
+	.caption b { color: #fcd34d; font-weight: 700; }
+</style>
+</head>
+<body>
+	<div class="grid"></div>
+	<div class="left">
+		<div class="wordmark">Aftercare<span class="dot">.</span></div>
+		<div class="tagline">Know what changed. Know what it cost.</div>
+		<div class="features">Core Web Vitals &nbsp;·&nbsp; Change Ledger &nbsp;·&nbsp; Regression Incidents</div>
+	</div>
+	<div class="chart">
+		<div class="chart-head">
+			<span class="chart-title">LCP&nbsp;&nbsp;p75</span>
+			<span class="pill">Fail</span>
+		</div>
+		<svg width="264" height="96" viewBox="0 0 264 96">
+			<!-- budget line -->
+			<line x1="0" y1="52" x2="264" y2="52" stroke="#fbbf24" stroke-width="1.4" stroke-dasharray="5,4" opacity="0.9"/>
+			<!-- steady series then breach -->
+			<path d="M0 66 L22 64 L44 68 L66 63 L88 67 L110 62 L132 66 L154 64 L176 60 L198 34 L220 26 L242 30 L262 22"
+				fill="none" stroke="#5eead4" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+			<!-- event marker at the jump -->
+			<line x1="187" y1="8" x2="187" y2="88" stroke="#f87171" stroke-width="1.2" stroke-dasharray="3,3" opacity="0.85"/>
+			<circle cx="262" cy="22" r="5" fill="#f87171" stroke="#fff" stroke-width="1.6"/>
+		</svg>
+		<div class="caption"><b>Plugin updated 3.15 → 3.16</b> — 41% regression, incident opened</div>
+	</div>
+</body>
+</html>

@@ -27,7 +27,7 @@ Every site on a care plan eventually produces the same two conversations: *"the 
 ### 📒 Change ledger
 - Records plugin updates (old → new version), activations and deactivations, theme updates and switches, core updates, allow-listed settings changes (never secrets, values truncated), content publishes and new users
 - Every entry is human-readable — "WP Rocket updated 3.15 to 3.16 by admin" — with actor and timestamp
-- Filterable timeline by type and date; 90 days of history
+- Filterable timeline by type and date, CSV export; 90 days of history
 
 ### 🧰 Fits into your workflow
 - **WordPress dashboard widget** — vitals status pills and open incidents on the main wp-admin screen
@@ -56,7 +56,7 @@ The free plugin tells you *that* something regressed and *what changed*. [Afterc
 
 - **Cause attribution** — every change from the 72 hours before a regression, ranked with high / medium / low confidence badges
 - **White-label monthly client reports** — vitals vs last month, work performed, incidents caught and resolved; your logo, colours, personal note; print/PDF and email delivery
-- **Slack and webhook notifications**, unlimited tracked URLs, per-URL budgets, 13-month history, unlimited ledger retention and CSV export
+- **Slack and webhook notifications**, unlimited tracked URLs, per-URL budgets, 13-month history and unlimited ledger retention
 
 ## Roadmap (free)
 
@@ -67,6 +67,7 @@ The free plugin tells you *that* something regressed and *what changed*. [Afterc
 ## Development
 
 - WordPress 6.4+, PHP 8.1+. Vanilla PHP with a light PSR-4 structure under the `Aftercare\` namespace — no build step, no framework.
+- **Distribution model:** this repository contains the full (premium) codebase. The WordPress.org free build is produced with `wp dist-archive .`, which excludes the premium-only files listed in `.distignore` (attribution engine, report builder, Slack/webhook notifiers) — directory guidelines forbid shipping locked functionality inside the free plugin. The free code degrades gracefully via `class_exists()` guards, so both builds run from the same source.
 - Cron uses Action Scheduler when available (e.g. WooCommerce installs), WP-Cron otherwise, with a health warning when WP-Cron looks unreliable.
 
 ```
