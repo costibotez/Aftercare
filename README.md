@@ -1,5 +1,12 @@
 # Aftercare
 
+![Aftercare — Know what changed. Know what it cost.](.wordpress-org/banner-1544x500.png)
+
+![WordPress 6.4+](https://img.shields.io/badge/WordPress-6.4%2B-21759b?logo=wordpress&logoColor=white)
+![PHP 8.1+](https://img.shields.io/badge/PHP-8.1%2B-777bb4?logo=php&logoColor=white)
+![License GPL-2.0-or-later](https://img.shields.io/badge/License-GPL--2.0--or--later-0f766e)
+![Version 1.0.0](https://img.shields.io/badge/Version-1.0.0-d97706)
+
 **Know what changed. Know what it cost. Prove what you did.**
 
 Aftercare is a free WordPress plugin for agencies, freelancers and site owners who look after WordPress sites long after launch. It watches your Core Web Vitals every day, records every change made to the site, and opens an incident the moment performance regresses — so you catch problems before your client (or your visitors) do.
@@ -64,6 +71,16 @@ The free plugin tells you *that* something regressed and *what changed*. [Afterc
 - Multisite network awareness
 - Agency Hub: a central dashboard aggregating many sites (the REST endpoints are already versioned and site-agnostic for this)
 
+## Screenshots
+
+| Dashboard | Change Ledger |
+|---|---|
+| ![Dashboard — vitals cards, budgets, status pills, incidents and recent changes](.wordpress-org/screenshot-1.png) | ![Change Ledger — filterable timeline of every site change](.wordpress-org/screenshot-2.png) |
+
+| Incidents | Settings |
+|---|---|
+| ![Incidents — regressions with breach value, budget and baseline](.wordpress-org/screenshot-3.png) | ![Settings — API key, tracked URLs, budgets and notifications](.wordpress-org/screenshot-4.png) |
+
 ## Development
 
 - WordPress 6.4+, PHP 8.1+. Vanilla PHP with a light PSR-4 structure under the `Aftercare\` namespace — no build step, no framework.
@@ -102,3 +119,7 @@ QA shortcut: **Dashboard → Run daily checks now** runs the full daily pipeline
 ## License
 
 GPL-2.0-or-later.
+
+---
+
+Built and maintained by [Nomad Developer](https://www.nomad-developer.co.uk/) — WordPress development, care plans and performance work for agencies and small businesses.

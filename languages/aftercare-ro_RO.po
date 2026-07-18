@@ -14,47 +14,46 @@ msgstr ""
 "X-Domain: aftercare\n"
 
 #. Plugin Name of the plugin
-#. Author of the plugin
 #: aftercare.php
-#: src/Admin/Menu.php:37
-#: src/Admin/Menu.php:38
+#: src/Admin/Menu.php:42
+#: src/Admin/Menu.php:43
 #: src/Core/Privacy.php:24
 msgid "Aftercare"
 msgstr "Aftercare"
 
-#: src/Admin/Menu.php:45
+#: src/Admin/Menu.php:50
 msgid "Dashboard"
 msgstr "Panou de control"
 
-#: src/Admin/Menu.php:46
+#: src/Admin/Menu.php:51
 msgid "Ledger"
 msgstr "Registru"
 
 #: src/Admin/LedgerPage.php:54
-#: src/Admin/Menu.php:46
+#: src/Admin/Menu.php:51
 msgid "Change Ledger"
 msgstr "Registrul modificărilor"
 
 #: src/Admin/DashboardPage.php:62
 #: src/Admin/IncidentsPage.php:31
-#: src/Admin/Menu.php:47
+#: src/Admin/Menu.php:52
 msgid "Incidents"
 msgstr "Incidente"
 
-#: src/Admin/Menu.php:48
+#: src/Admin/Menu.php:53
 msgid "Reports"
 msgstr "Rapoarte"
 
-#: src/Admin/Menu.php:48
+#: src/Admin/Menu.php:53
 #: src/Admin/ReportsPage.php:18
 msgid "Client Reports"
 msgstr "Rapoarte pentru clienți"
 
-#: src/Admin/Menu.php:49
+#: src/Admin/Menu.php:54
 msgid "Settings"
 msgstr "Setări"
 
-#: src/Admin/Menu.php:49
+#: src/Admin/Menu.php:54
 #: src/Admin/SettingsPage.php:21
 msgid "Aftercare Settings"
 msgstr "Setări Aftercare"
@@ -92,7 +91,7 @@ msgid "No data"
 msgstr "Fără date"
 
 #: src/Admin/IncidentsPage.php:172
-#: src/Admin/ReportsPage.php:75
+#: src/Admin/ReportsPage.php:77
 msgid "Open"
 msgstr "Deschis"
 
@@ -165,7 +164,7 @@ msgid "Baseline"
 msgstr "Referință"
 
 #: src/Admin/IncidentsPage.php:45
-#: src/Admin/ReportsPage.php:61
+#: src/Admin/ReportsPage.php:63
 #: templates/report-default.php:130
 msgid "Status"
 msgstr "Stare"
@@ -192,7 +191,7 @@ msgid "Low confidence"
 msgstr "Încredere scăzută"
 
 #: src/Admin/IncidentsPage.php:144
-#: src/Admin/ReportsPage.php:24
+#: src/Admin/ReportsPage.php:26
 msgid "Upgrade to Pro"
 msgstr "Treci la Pro"
 
@@ -208,7 +207,7 @@ msgstr "Registrul complet"
 msgid "Filter"
 msgstr "Filtrează"
 
-#: src/Admin/LedgerPage.php:74
+#: src/Admin/LedgerPage.php:73
 msgid "Export CSV"
 msgstr "Exportă CSV"
 
@@ -269,19 +268,19 @@ msgstr "Referință pe 28 de zile"
 msgid "View incident and recent changes"
 msgstr "Vezi incidentul și modificările recente"
 
-#: src/Admin/ReportsPage.php:112
+#: src/Admin/ReportsPage.php:114
 msgid "Send to client"
 msgstr "Trimite clientului"
 
-#: src/Admin/ReportsPage.php:100
+#: src/Admin/ReportsPage.php:102
 msgid "Save note"
 msgstr "Salvează nota"
 
-#: src/Admin/ReportsPage.php:98
+#: src/Admin/ReportsPage.php:100
 msgid "Personal note to the client"
 msgstr "Notă personală pentru client"
 
-#: src/Admin/ReportsPage.php:48
+#: src/Admin/ReportsPage.php:50
 msgid "Generate draft for last month"
 msgstr "Generează ciornă pentru luna trecută"
 
@@ -311,10 +310,10 @@ msgid "Run daily checks now"
 msgstr "Rulează verificările zilnice acum"
 
 #: src/Admin/IncidentsPage.php:192
-#: src/Admin/LedgerPage.php:155
-#: src/Admin/Menu.php:65
+#: src/Admin/LedgerPage.php:153
+#: src/Admin/Menu.php:70
 #: src/Admin/Onboarding.php:75
-#: src/Admin/ReportsPage.php:190
+#: src/Admin/ReportsPage.php:192
 #: src/Admin/SettingsPage.php:157
 msgid "You do not have permission to do that."
 msgstr "Nu ai permisiunea de a face asta."
@@ -327,11 +326,6 @@ msgstr ""
 #. Description of the plugin
 #: aftercare.php
 msgid "Daily Core Web Vitals monitoring, a complete change ledger and regression incidents with email alerts. Know what changed, know what it cost — catch performance problems before your visitors do."
-msgstr ""
-
-#. Author URI of the plugin
-#: aftercare.php
-msgid "https://github.com/costibotez"
 msgstr ""
 
 #: aftercare.php:31
@@ -465,26 +459,18 @@ msgstr ""
 msgid "To date"
 msgstr ""
 
-#: src/Admin/LedgerPage.php:79
+#: src/Admin/LedgerPage.php:77
 msgid "No events match. Site changes are recorded automatically as they happen."
 msgstr ""
 
-#: src/Admin/LedgerPage.php:105
-msgid "Free keeps 90 days of history. Aftercare Pro keeps the ledger forever and adds CSV export."
-msgstr ""
-
 #. translators: 1: actor name, 2: human time diff
-#: src/Admin/LedgerPage.php:122
+#: src/Admin/LedgerPage.php:120
 #, php-format
 msgid "by %1$s · %2$s ago"
 msgstr ""
 
-#: src/Admin/LedgerPage.php:123
+#: src/Admin/LedgerPage.php:121
 msgid "system"
-msgstr ""
-
-#: src/Admin/LedgerPage.php:159
-msgid "CSV export is an Aftercare Pro feature."
 msgstr ""
 
 #: src/Admin/Onboarding.php:44
@@ -511,65 +497,65 @@ msgstr ""
 msgid "Open Settings"
 msgstr ""
 
-#: src/Admin/ReportsPage.php:22
+#: src/Admin/ReportsPage.php:24
 msgid "Turn every month into proof of your work."
 msgstr ""
 
-#: src/Admin/ReportsPage.php:23
+#: src/Admin/ReportsPage.php:25
 msgid "Aftercare Pro drafts a white-label report per month: Core Web Vitals versus last month, every change you made, every regression caught and resolved — with your logo, your colours and a personal note. Print it, download it or email it straight to the client."
 msgstr ""
 
-#: src/Admin/ReportsPage.php:31
+#: src/Admin/ReportsPage.php:33
 msgid "Report sent to the configured client recipients."
 msgstr ""
 
-#: src/Admin/ReportsPage.php:34
+#: src/Admin/ReportsPage.php:36
 msgid "Sending failed. Check that client recipients are configured in Settings and that the site can send email."
 msgstr ""
 
-#: src/Admin/ReportsPage.php:49
+#: src/Admin/ReportsPage.php:51
 msgid "Generate draft for this month (partial)"
 msgstr ""
 
-#: src/Admin/ReportsPage.php:54
+#: src/Admin/ReportsPage.php:56
 msgid "No reports yet. Drafts are generated automatically on the 1st of each month, or on demand above."
 msgstr ""
 
-#: src/Admin/ReportsPage.php:60
+#: src/Admin/ReportsPage.php:62
 msgid "Period"
 msgstr ""
 
-#: src/Admin/ReportsPage.php:62
+#: src/Admin/ReportsPage.php:64
 msgid "Generated"
 msgstr ""
 
-#: src/Admin/ReportsPage.php:63
-#: src/Admin/ReportsPage.php:71
+#: src/Admin/ReportsPage.php:65
+#: src/Admin/ReportsPage.php:73
 msgid "Sent"
 msgstr ""
 
-#: src/Admin/ReportsPage.php:72
+#: src/Admin/ReportsPage.php:74
 msgid "Draft"
 msgstr ""
 
-#: src/Admin/ReportsPage.php:84
-#: src/Admin/ReportsPage.php:165
+#: src/Admin/ReportsPage.php:86
+#: src/Admin/ReportsPage.php:167
 msgid "Report not found."
 msgstr ""
 
-#: src/Admin/ReportsPage.php:90
+#: src/Admin/ReportsPage.php:92
 msgid "All reports"
 msgstr ""
 
-#: src/Admin/ReportsPage.php:105
+#: src/Admin/ReportsPage.php:107
 msgid "Preview / print (PDF via browser)"
 msgstr ""
 
-#: src/Admin/ReportsPage.php:108
+#: src/Admin/ReportsPage.php:110
 msgid "Send this report to the configured client recipients?"
 msgstr ""
 
-#: src/Admin/ReportsPage.php:194
+#: src/Admin/ReportsPage.php:196
 msgid "Client reports are an Aftercare Pro feature."
 msgstr ""
 
@@ -815,11 +801,11 @@ msgstr ""
 msgid "Open the Aftercare dashboard"
 msgstr ""
 
-#: src/Core/Cron.php:133
+#: src/Core/Cron.php:134
 msgid "Aftercare:"
 msgstr ""
 
-#: src/Core/Cron.php:134
+#: src/Core/Cron.php:135
 msgid "WP-Cron does not appear to be running reliably on this site, so daily vitals collection and breach detection may be delayed. Configure a real server cron job that calls wp-cron.php, or install a plugin that provides Action Scheduler."
 msgstr ""
 
@@ -995,4 +981,18 @@ msgstr ""
 
 #: templates/report-default.php:129
 msgid "Peak"
+msgstr ""
+
+#. Author of the plugin
+#: aftercare.php
+msgid "Nomad Developer"
+msgstr ""
+
+#. Author URI of the plugin
+#: aftercare.php
+msgid "https://www.nomad-developer.co.uk/"
+msgstr ""
+
+#: src/Admin/LedgerPage.php:103
+msgid "Free keeps 90 days of history. Aftercare Pro keeps the ledger forever."
 msgstr ""
