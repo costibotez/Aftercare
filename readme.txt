@@ -63,6 +63,16 @@ The free plugin tells you *that* something regressed and *what changed*. Afterca
 
 Aftercare does not phone home. CrUX data is fetched directly from Google's API using the key you provide. The optional RUM beacon posts anonymous metric values (no cookies, no personal data, no IPs stored) to your own site's REST API and can be disabled at any time.
 
+== External Services ==
+
+Aftercare connects to the following external services. No connection is made until you configure it.
+
+**Chrome UX Report API (Google)** — used to retrieve real-user Core Web Vitals field data for the URLs you choose to track. Once you enter your own Google API key, the plugin sends your tracked URLs (or your site's origin) together with that API key to `https://chromeuxreport.googleapis.com` once per day per URL. No visitor data, personal data or site content is sent. This service is provided by Google: [Terms of Service](https://developers.google.com/terms), [Privacy Policy](https://policies.google.com/privacy). If no API key is configured, no request is ever made.
+
+**Slack incoming webhooks (Pro, optional)** — if you configure a Slack webhook URL, incident notifications (metric name, measured value, budget, affected URL and your site name) are sent to that URL when a regression is detected or resolved. This service is provided by Slack: [Terms of Service](https://slack.com/terms-of-service), [Privacy Policy](https://slack.com/privacy-policy).
+
+**Generic webhook (Pro, optional)** — if you configure a webhook URL of your own choosing, the same incident data is POSTed to it as JSON. The receiving service is chosen and operated by you; review its terms and privacy policy before configuring it.
+
 == Installation ==
 
 1. Install and activate the plugin.
@@ -106,3 +116,8 @@ Yes. `wp aftercare run` executes the full daily pipeline (CrUX pull, RUM aggrega
 * Weekly digest email (opt-out)
 * Privacy-policy content for the RUM beacon
 * Pro: cause attribution, white-label client reports, Slack/webhooks, extended retention
+
+== Upgrade Notice ==
+
+= 1.0.0 =
+Initial release.
