@@ -122,4 +122,10 @@ GPL-2.0-or-later.
 
 ---
 
-Built and maintained by [Nomad Developer](https://www.nomad-developer.co.uk/) — WordPress development, care plans and performance work for agencies and small businesses.
+<p align="center">
+  <img src=".wordpress-org/icon-128x128.png" alt="Aftercare logo" width="80" height="80">
+</p>
+
+<p align="center">
+  Built and maintained by <a href="https://www.nomad-developer.co.uk/">Nomad Developer</a> — WordPress development, care plans and performance work for agencies and small businesses.
+</p>

@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="wp-base.css">
+<link rel="stylesheet" href="../../assets/css/admin.css">
+</head>
+<body>
+<div class="wrap aftercare-wrap">
+	<h1>Incident detail</h1>
+	<p><a href="#">&larr; All incidents</a></p>
+
+	<div class="aftercare-panel">
+		<h2>CLS — https://example-client.co.uk/ <span class="aftercare-pill aftercare-pill-fail">Open</span></h2>
+		<div class="aftercare-incident-stats">
+			<div><span class="aftercare-stat-label">Breach p75</span><span class="aftercare-stat aftercare-fail">0.214</span></div>
+			<div><span class="aftercare-stat-label">Budget</span><span class="aftercare-stat">0.100</span></div>
+			<div><span class="aftercare-stat-label">28-day baseline</span><span class="aftercare-stat">0.057</span></div>
+			<div><span class="aftercare-stat-label">Opened</span><span class="aftercare-stat">2026-07-17 06:10 UTC</span></div>
+		</div>
+		<div class="aftercare-sparkline aftercare-sparkline-large" data-sparkline="[0.05,0.06,0.05,0.07,0.05,0.06,0.05,0.05,0.06,0.05,0.07,0.06,0.05,0.06,0.05,0.06,0.05,0.07,0.05,0.06,0.05,0.06,0.13,0.18,0.2,0.19,0.22,0.21,0.2,0.214]" data-budget="0.1"></div>
+		<div class="aftercare-inline-form">
+			<button class="button">Acknowledge</button>
+			<button class="button">Mark resolved</button>
+			<button class="button">Dismiss</button>
+		</div>
+	</div>
+
+	<div class="aftercare-columns">
+		<div class="aftercare-panel">
+			<h2>Probable cause</h2>
+			<ol class="aftercare-causes">
+				<li><span class="aftercare-badge aftercare-badge-high">High confidence</span> Plugin activated: Smash Balloon Instagram Feed <span class="aftercare-event-meta">2026-07-16 09:41 UTC</span></li>
+				<li><span class="aftercare-badge aftercare-badge-high">High confidence</span> WP Rocket updated 3.15.4 to 3.16.1 <span class="aftercare-event-meta">2026-07-15 14:02 UTC</span></li>
+				<li><span class="aftercare-badge aftercare-badge-medium">Medium confidence</span> Page published: Summer Offer Landing <span class="aftercare-event-meta">2026-07-16 11:20 UTC</span></li>
+			</ol>
+		</div>
+		<div class="aftercare-panel">
+			<h2>Changes in the 72 hours before the breach</h2>
+			<ul class="aftercare-timeline">
+				<li class="aftercare-event"><span class="dashicons"></span> <span class="aftercare-event-summary">Plugin activated: Smash Balloon Instagram Feed</span><span class="aftercare-event-meta">by admin · 2026-07-16 09:41 UTC</span></li>
+				<li class="aftercare-event"><span class="dashicons"></span> <span class="aftercare-event-summary">Page published: Summer Offer Landing</span><span class="aftercare-event-meta">by editor · 2026-07-16 11:20 UTC</span></li>
+				<li class="aftercare-event"><span class="dashicons"></span> <span class="aftercare-event-summary">WP Rocket updated 3.15.4 to 3.16.1</span><span class="aftercare-event-meta">by admin · 2026-07-15 14:02 UTC</span></li>
+			</ul>
+		</div>
+	</div>
+</div>
+<script src="../../assets/js/admin.js"></script>
+</body>
+</html>
