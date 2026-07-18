@@ -1,3 +1,14 @@
+# Premium-only code. Directory guidelines 5 & 6 forbid shipping locked
+# functionality inside the free plugin, so the WordPress.org build excludes
+# these files; the free code degrades gracefully via class_exists() guards.
+# The premium build (Freemius deployment) includes them.
+src/Incidents/Attribution.php
+src/Reports
+src/Notifications/Slack.php
+src/Notifications/Webhook.php
+templates/report-default.php
+
+# Repository files.
 .distignore
 .git
 .github

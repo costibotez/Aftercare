@@ -105,7 +105,8 @@ final class Cron {
 		\Aftercare\Vitals\Status::flush_cache();
 
 		// 6. Pro: draft last month's client report on the 1st of each month.
-		if ( License::is_pro() && '1' === gmdate( 'j' ) ) {
+		// The report builder ships only in the premium build.
+		if ( License::is_pro() && class_exists( ReportBuilder::class ) && '1' === gmdate( 'j' ) ) {
 			$prev_month = (int) gmdate( 'n', strtotime( 'first day of last month' ) );
 			$prev_year  = (int) gmdate( 'Y', strtotime( 'first day of last month' ) );
 			( new ReportBuilder() )->generate_draft( $prev_month, $prev_year );
