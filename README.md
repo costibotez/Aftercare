@@ -29,6 +29,15 @@ Every site on a care plan eventually produces the same two conversations: *"the 
 - Every entry is human-readable — "WP Rocket updated 3.15 to 3.16 by admin" — with actor and timestamp
 - Filterable timeline by type and date; 90 days of history
 
+### 🧰 Fits into your workflow
+- **WordPress dashboard widget** — vitals status pills and open incidents on the main wp-admin screen
+- **Admin bar indicator** — a pass/warn/fail dot for administrators, on the front end too
+- **Site Health integration** — tests for "API key configured", "daily checks running" and "budgets currently breached"
+- **WP-CLI commands** — `wp aftercare pull`, `wp aftercare check`, `wp aftercare status`, `wp aftercare run`; point a real server cron at `wp aftercare run` and skip WP-Cron entirely
+- **Weekly digest email** — vitals status, changes made and incidents from the past 7 days (opt-out in settings)
+- **First-run setup guide** — a three-step pointer until vitals collection is configured
+- **Privacy-policy helper** — suggested policy text for the RUM beacon via the WordPress privacy tools
+
 ### 🔒 Private by design
 - **No phoning home.** CrUX calls go directly from your server to Google with your key; RUM beacons post to your own site's REST API; nothing is sent to us — there is no "us" to send it to
 - All output escaped, all input sanitized, nonces and `manage_options` capability checks on every form and route
@@ -51,15 +60,9 @@ The free plugin tells you *that* something regressed and *what changed*. [Afterc
 
 ## Roadmap (free)
 
-Planned for upcoming free releases:
-
-- First-run onboarding flow (API key → URLs → first pull, guided)
-- WordPress dashboard widget with vitals status and open incidents
-- Site Health integration (API key configured, cron healthy, budgets breached)
-- Admin bar pass/warn/fail indicator
-- WP-CLI commands (`wp aftercare pull`, `wp aftercare status`)
-- Weekly summary email digest
-- Privacy-policy content for the RUM beacon via `wp_add_privacy_policy_content`
+- Guided multi-step onboarding wizard (replacing the current setup notice)
+- Multisite network awareness
+- Agency Hub: a central dashboard aggregating many sites (the REST endpoints are already versioned and site-agnostic for this)
 
 ## Development
 

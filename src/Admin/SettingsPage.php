@@ -77,7 +77,11 @@ final class SettingsPage {
 
 		echo '<tr><th scope="row"><label for="ac-alert-email">' . esc_html__( 'Alert email', 'aftercare' ) . '</label></th><td>';
 		echo '<input type="email" id="ac-alert-email" name="alert_email" value="' . esc_attr( (string) $options['alert_email'] ) . '" class="regular-text" />';
-		echo '<p class="description">' . esc_html__( 'New incidents are emailed here.', 'aftercare' ) . '</p>';
+		echo '<p class="description">' . esc_html__( 'New incidents and the weekly digest are emailed here.', 'aftercare' ) . '</p>';
+		echo '</td></tr>';
+
+		echo '<tr><th scope="row">' . esc_html__( 'Weekly digest', 'aftercare' ) . '</th><td>';
+		echo '<label><input type="checkbox" name="weekly_digest" value="1" ' . checked( (bool) $options['weekly_digest'], true, false ) . ' /> ' . esc_html__( 'Send a weekly summary email: vitals status, changes made and incidents from the past 7 days', 'aftercare' ) . '</label>';
 		echo '</td></tr>';
 
 		$pro_attr = $is_pro ? '' : ' disabled';
@@ -176,6 +180,7 @@ final class SettingsPage {
 			'rum_enabled'            => ! empty( $_POST['rum_enabled'] ),
 			'rum_sample_rate'        => max( 1, min( 100, (int) ( $_POST['rum_sample_rate'] ?? 10 ) ) ),
 			'alert_email'            => sanitize_email( wp_unslash( $_POST['alert_email'] ?? '' ) ),
+			'weekly_digest'          => ! empty( $_POST['weekly_digest'] ),
 			'keep_data_on_uninstall' => ! empty( $_POST['keep_data_on_uninstall'] ),
 		);
 

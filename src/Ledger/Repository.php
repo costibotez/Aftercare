@@ -156,6 +156,28 @@ final class Repository {
 		return $out;
 	}
 
+	/**
+	 * Count per event type inside an arbitrary GMT window (weekly digest).
+	 *
+	 * @return array<string, int>
+	 */
+	public function counts_between( string $from_gmt, string $to_gmt ): array {
+		global $wpdb;
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT event_type, COUNT(*) AS total FROM {$this->table()} WHERE occurred_at >= %s AND occurred_at <= %s GROUP BY event_type ORDER BY total DESC", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				$from_gmt,
+				$to_gmt
+			),
+			ARRAY_A
+		);
+		$out = array();
+		foreach ( $rows ?: array() as $row ) {
+			$out[ (string) $row['event_type'] ] = (int) $row['total'];
+		}
+		return $out;
+	}
+
 	public function prune( int $days ): void {
 		global $wpdb;
 		$wpdb->query(

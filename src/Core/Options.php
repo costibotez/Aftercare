@@ -34,6 +34,7 @@ final class Options {
 			'rum_enabled'            => false,
 			'rum_sample_rate'        => 10, // percent of visits
 			'alert_email'            => get_option( 'admin_email' ),
+			'weekly_digest'          => true,
 			'slack_webhook'          => '',
 			'webhook_url'            => '',
 			'client_recipients'      => '',

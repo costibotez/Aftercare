@@ -125,6 +125,23 @@ final class Repository {
 	}
 
 	/**
+	 * Incidents opened since a GMT datetime (weekly digest).
+	 *
+	 * @return array<int, array<string, mixed>>
+	 */
+	public function opened_since( string $from_gmt ): array {
+		global $wpdb;
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT * FROM {$this->table()} WHERE opened_at >= %s ORDER BY opened_at DESC", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				$from_gmt
+			),
+			ARRAY_A
+		);
+		return $rows ?: array();
+	}
+
+	/**
 	 * Incidents opened inside one calendar month (report engine).
 	 *
 	 * @return array<int, array<string, mixed>>

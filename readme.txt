@@ -37,6 +37,14 @@ It is built for agencies and freelancers who maintain client sites on monthly ca
 * Human-readable entries with the responsible user: "WP Rocket updated 3.15 to 3.16 by admin"
 * Filterable timeline by type and date, 90 days of history
 
+= 🧰 Fits into your workflow =
+
+* **Dashboard widget** with vitals status and open incidents on the main wp-admin screen, plus a pass / warn / fail dot in the admin bar
+* **Site Health integration** — checks that vitals collection is configured, daily checks are running and budgets are not breached
+* **WP-CLI commands** — `wp aftercare pull`, `wp aftercare check`, `wp aftercare status` and `wp aftercare run` for scripted setups and real server crons
+* **Weekly digest email** — vitals status, changes made and incidents from the past 7 days (opt-out in settings)
+* **Guided first run** — a three-step setup pointer until first data arrives, and suggested privacy-policy text for the RUM beacon
+
 = 🔒 Private by design =
 
 * No phoning home, no accounts, no external service. CrUX calls go straight from your server to Google with your key; RUM beacons post to your own site's REST API
@@ -83,7 +91,18 @@ By default all Aftercare tables and options are removed on uninstall. Tick "Keep
 3. Incident detail with the 72-hour change window
 4. Monthly client report (Pro)
 
+= Can I run the checks from a server cron instead of WP-Cron? =
+
+Yes. `wp aftercare run` executes the full daily pipeline (CrUX pull, RUM aggregation, breach detection, retention). Aftercare also uses Action Scheduler automatically when another plugin (such as WooCommerce) provides it.
+
 == Changelog ==
 
 = 1.0.0 =
-* Initial release: vitals monitoring (CrUX + RUM), performance budgets, breach detection, incidents, change ledger, email alerts, Pro attribution/reports/notifications.
+* Vitals monitoring: daily CrUX p75 pull (LCP, INP, CLS, TTFB) with your own Google API key, optional ~2 KB real-user monitoring beacon
+* Performance budgets with breach detection against budget and 28-day baseline; incidents with status workflow and email alerts
+* Change ledger: plugin/theme/core updates, activations, theme switches, settings changes, publishes and new users
+* Dashboard widget, admin bar status indicator, Site Health tests, first-run setup guide
+* WP-CLI commands: pull, check, status, run
+* Weekly digest email (opt-out)
+* Privacy-policy content for the RUM beacon
+* Pro: cause attribution, white-label client reports, Slack/webhooks, extended retention
