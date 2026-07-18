@@ -10,6 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Storage and queries for the change ledger.
  */
+// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Repository for the plugin's own custom table; direct queries are the point. Hot reads are cached at the Vitals\Status snapshot layer.
 final class Repository {
 
 	public const EVENT_TYPES = array(
@@ -69,8 +70,8 @@ final class Repository {
 		$params[] = $per_page;
 		$params[] = max( 0, ( $page - 1 ) * $per_page );
 
-		$rows = $wpdb->get_results(
-			$wpdb->prepare(
+		$rows = $wpdb->get_results( // phpcs:ignore PluginCheck.Security.DirectDB.UnescapedDBParameter -- $where is assembled from literal SQL fragments only; all values go through prepare().
+			$wpdb->prepare( // phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- additional placeholders live inside $where; counts always match by construction.
 				"SELECT * FROM {$this->table()} {$where} ORDER BY occurred_at DESC, id DESC LIMIT %d OFFSET %d", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 				...$params
 			),
@@ -86,7 +87,7 @@ final class Repository {
 		global $wpdb;
 		[ $where, $params ] = $this->build_where( $filters );
 		if ( $params ) {
-			return (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$this->table()} {$where}", ...$params ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			return (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$this->table()} {$where}", ...$params ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, PluginCheck.Security.DirectDB.UnescapedDBParameter -- placeholders live inside $where, which is assembled from literal SQL fragments; values go through prepare().
 		}
 		return (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$this->table()}" ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table name is built from $wpdb->prefix, no user input.
 	}
