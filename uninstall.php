@@ -4,6 +4,8 @@
  * user checked "keep data on uninstall" in settings.
  */
 
+// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-off cleanup of the plugin's own tables and options at uninstall; caching is meaningless here.
+
 if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 	exit;
 }
@@ -17,7 +19,7 @@ global $wpdb;
 
 $aftercare_prefix = $wpdb->prefix . 'aftercare_';
 foreach ( array( 'vitals_samples', 'ledger_events', 'incidents', 'reports' ) as $aftercare_table ) {
-	$wpdb->query( "DROP TABLE IF EXISTS {$aftercare_prefix}{$aftercare_table}" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.SchemaChange
+	$wpdb->query( "DROP TABLE IF EXISTS {$aftercare_prefix}{$aftercare_table}" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.SchemaChange, PluginCheck.Security.DirectDB.UnescapedDBParameter -- both parts are built from $wpdb->prefix and a hardcoded list; no user input.
 }
 
 delete_option( 'aftercare_settings' );

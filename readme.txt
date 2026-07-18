@@ -1,4 +1,4 @@
-=== Aftercare — Core Web Vitals Monitor, Change Ledger & Client Reports ===
+=== Aftercare ===
 Contributors: costibotez
 Tags: core web vitals, performance, monitoring, activity log, client reports
 Requires at least: 6.4

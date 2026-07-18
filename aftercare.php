@@ -91,7 +91,10 @@ register_deactivation_hook( __FILE__, array( 'Aftercare\\Core\\Activator', 'deac
 add_action(
 	'init',
 	static function () {
-		load_plugin_textdomain( 'aftercare', false, dirname( plugin_basename( AFTERCARE_FILE ) ) . '/languages' );
+		// Kept deliberately: WordPress.org auto-loads language packs, but the
+		// bundled ro_RO translation must also load on installs that do not
+		// receive packs (e.g. the premium build distributed off-directory).
+		load_plugin_textdomain( 'aftercare', false, dirname( plugin_basename( AFTERCARE_FILE ) ) . '/languages' ); // phpcs:ignore PluginCheck.CodeAnalysis.DiscouragedFunctions.load_plugin_textdomainFound
 	},
 	0
 );
