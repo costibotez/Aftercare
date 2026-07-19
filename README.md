@@ -1,17 +1,45 @@
-# Aftercare
+<p align="center">
+  <img src=".wordpress-org/banner-1544x500.png" alt="Aftercare — Know what changed. Know what it cost." />
+</p>
 
-![Aftercare — Know what changed. Know what it cost.](.wordpress-org/banner-1544x500.png)
+<h1 align="center">Aftercare</h1>
 
-![WordPress 6.4+](https://img.shields.io/badge/WordPress-6.4%2B-21759b?logo=wordpress&logoColor=white)
-![PHP 8.1+](https://img.shields.io/badge/PHP-8.1%2B-777bb4?logo=php&logoColor=white)
-![License GPL-2.0-or-later](https://img.shields.io/badge/License-GPL--2.0--or--later-0f766e)
-![Version 1.0.0](https://img.shields.io/badge/Version-1.0.0-d97706)
+<p align="center">
+  <strong>Know what changed. Know what it cost. Prove what you did.</strong>
+</p>
 
-**Know what changed. Know what it cost. Prove what you did.**
+<p align="center">
+  A free WordPress plugin for agencies, freelancers and site owners who look after WordPress sites long after launch —<br />
+  it watches your Core Web Vitals every day, records every change made to the site, and opens an incident<br />
+  the moment performance regresses, so you catch problems before your client (or your visitors) do.
+</p>
 
-Aftercare is a free WordPress plugin for agencies, freelancers and site owners who look after WordPress sites long after launch. It watches your Core Web Vitals every day, records every change made to the site, and opens an incident the moment performance regresses — so you catch problems before your client (or your visitors) do.
+<p align="center">
+  <img src="https://img.shields.io/badge/WordPress-6.4%2B-21759b?logo=wordpress&logoColor=white" alt="WordPress 6.4+" />
+  <img src="https://img.shields.io/badge/PHP-8.1%2B-777bb4?logo=php&logoColor=white" alt="PHP 8.1+" />
+  <img src="https://img.shields.io/badge/Version-1.0.0-d97706" alt="Version 1.0.0" />
+  <img src="https://img.shields.io/badge/License-GPL--2.0--or--later-0f766e" alt="License GPL-2.0-or-later" />
+</p>
 
-## Why it exists
+<p align="center">
+  <a href="#-quick-start-under-5-minutes">Quick start</a> ·
+  <a href="#what-the-free-plugin-includes">Features</a> ·
+  <a href="#aftercare-pro">Pro</a> ·
+  <a href="#screenshots">Screenshots</a> ·
+  <a href="#roadmap-free">Roadmap</a> ·
+  <a href="#development">Development</a>
+</p>
+
+<p align="center">
+  Author: <a href="https://www.nomad-developer.co.uk/">Costin Botez</a> (<a href="https://www.instagram.com/costinbotez/">@costinbotez</a>) ·
+  <a href="https://www.nomad-developer.co.uk/">Portfolio</a> ·
+  <a href="https://www.instagram.com/costinbotez/">Instagram</a> ·
+  <a href="https://github.com/costibotez">GitHub</a>
+</p>
+
+---
+
+## Why Aftercare exists
 
 Every site on a care plan eventually produces the same two conversations: *"the site feels slower — what happened?"* and *"what did you actually do this month?"* Aftercare answers both from data it collects automatically:
 
@@ -50,7 +78,7 @@ Every site on a care plan eventually produces the same two conversations: *"the 
 - All output escaped, all input sanitized, nonces and `manage_options` capability checks on every form and route
 - Uninstall removes all tables and options unless you tick "keep data"
 
-## Quick start (under 5 minutes)
+## ⚡ Quick start (under 5 minutes)
 
 1. Install and activate the plugin.
 2. Create a free Google API key with the [Chrome UX Report API](https://console.cloud.google.com/apis/library/chromeuxreport.googleapis.com) enabled.
@@ -127,5 +155,6 @@ GPL-2.0-or-later.
 </p>
 
 <p align="center">
-  Built and maintained by <a href="https://www.nomad-developer.co.uk/">Nomad Developer</a> — WordPress development, care plans and performance work for agencies and small businesses.
+  Built and maintained by <a href="https://www.nomad-developer.co.uk/">Costin Botez</a> — <a href="https://www.nomad-developer.co.uk/">Nomad Developer</a> · <a href="https://www.instagram.com/costinbotez/">@costinbotez</a><br />
+  WordPress development, care plans and performance work for agencies and small businesses.
 </p>
