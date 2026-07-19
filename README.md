@@ -31,7 +31,7 @@
 </p>
 
 <p align="center">
-  Author: <a href="https://www.nomad-developer.co.uk/">Costi Botez</a> (<a href="https://www.instagram.com/costinbotez/">@costinbotez</a>) ·
+  Author: <a href="https://www.nomad-developer.co.uk/">Costin Botez</a> (<a href="https://www.instagram.com/costinbotez/">@costinbotez</a>) ·
   <a href="https://www.nomad-developer.co.uk/">Portfolio</a> ·
   <a href="https://www.instagram.com/costinbotez/">Instagram</a> ·
   <a href="https://github.com/costibotez">GitHub</a>
@@ -155,6 +155,6 @@ GPL-2.0-or-later.
 </p>
 
 <p align="center">
-  Built and maintained by <a href="https://www.nomad-developer.co.uk/">Costi Botez</a> — <a href="https://www.nomad-developer.co.uk/">Nomad Developer</a> · <a href="https://www.instagram.com/costinbotez/">@costinbotez</a><br />
+  Built and maintained by <a href="https://www.nomad-developer.co.uk/">Costin Botez</a> — <a href="https://www.nomad-developer.co.uk/">Nomad Developer</a> · <a href="https://www.instagram.com/costinbotez/">@costinbotez</a><br />
   WordPress development, care plans and performance work for agencies and small businesses.
 </p>
