@@ -19,6 +19,16 @@ final class BreachDetector {
 
 	private const REGRESSION_FACTOR = 1.2;
 
+	/**
+	 * Days of same-source history required before the baseline comparison is
+	 * trusted. When CrUX flips a thin URL-level record to origin-level (or
+	 * back), the new source starts with no history of its own; comparing the
+	 * first origin-level reading against a URL-level baseline reports a
+	 * regression that never happened. Budget breaches are absolute and still
+	 * fire from day one.
+	 */
+	private const MIN_BASELINE_DAYS = 7;
+
 	private IncidentRepository $incidents;
 
 	public function __construct( private SampleRepository $samples ) {
@@ -31,17 +41,23 @@ final class BreachDetector {
 
 		foreach ( Options::tracked_urls() as $url ) {
 			foreach ( Options::METRICS as $metric ) {
-				$p75 = $this->samples->p75_for_day( $url, $metric, $yesterday );
-				if ( null === $p75 ) {
+				$sample = $this->samples->latest_for_day( $url, $metric, $yesterday );
+				if ( null === $sample ) {
 					continue;
 				}
+				$p75 = $sample['value'];
 
-				$budget   = Options::budget( $metric, $url );
-				$baseline = $this->samples->baseline( $url, $metric, $baseline_start, $yesterday );
+				$budget = Options::budget( $metric, $url );
 
-				$over_budget    = $budget > 0 && $p75 > $budget;
-				$over_baseline  = null !== $baseline && $baseline > 0 && $p75 > $baseline * self::REGRESSION_FACTOR;
-				$open_incident  = $this->incidents->find_open( $url, $metric );
+				// Baseline is built from the same source as the reading, so a
+				// URL-level p75 is never held against an origin-level average.
+				$history       = $this->samples->baseline( $url, $metric, $baseline_start, $yesterday, $sample['source'] );
+				$comparable    = null !== $history && $history['days'] >= self::MIN_BASELINE_DAYS;
+				$baseline      = $comparable ? $history['value'] : null;
+
+				$over_budget   = $budget > 0 && $p75 > $budget;
+				$over_baseline = null !== $baseline && $baseline > 0 && $p75 > $baseline * self::REGRESSION_FACTOR;
+				$open_incident = $this->incidents->find_open( $url, $metric );
 
 				if ( $over_budget || $over_baseline ) {
 					if ( $open_incident ) {

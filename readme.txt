@@ -4,7 +4,7 @@ Tags: core web vitals, performance, monitoring, activity log, client reports
 Requires at least: 6.4
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 1.0.0
+Stable tag: 1.0.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -108,6 +108,12 @@ By default all Aftercare tables and options are removed on uninstall. Tick "Keep
 Yes. `wp aftercare run` executes the full daily pipeline (CrUX pull, RUM aggregation, breach detection, retention). Aftercare also uses Action Scheduler automatically when another plugin (such as WooCommerce) provides it.
 
 == Changelog ==
+
+= 1.0.1 =
+* CrUX samples now record which level they came from — `crux_url` (the tracked URL) or `crux_origin` (the whole site, used when the URL-level record is too thin)
+* The 28-day baseline is built from a single source, so a URL-level reading is never compared against an origin-level average
+* The baseline comparison stays muted until 7 days of same-source history exist, preventing a false "20% regression" the day CrUX switches levels
+* Sparklines plot one point per day from the preferred source instead of blending levels together
 
 = 1.0.0 =
 * Vitals monitoring: daily CrUX p75 pull (LCP, INP, CLS, TTFB) with your own Google API key, optional ~2 KB real-user monitoring beacon

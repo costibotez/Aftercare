@@ -10,7 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 final class Migrations {
 
-	public const SCHEMA_VERSION        = '1.0.0';
+	public const SCHEMA_VERSION        = '1.1.0';
 	public const SCHEMA_VERSION_OPTION = 'aftercare_schema_version';
 
 	public static function maybe_upgrade(): void {
@@ -34,7 +34,7 @@ final class Migrations {
 				url VARCHAR(2000) NOT NULL,
 				metric VARCHAR(10) NOT NULL,
 				p75_value DECIMAL(10,3) NOT NULL DEFAULT 0,
-				sample_source VARCHAR(10) NOT NULL DEFAULT 'crux',
+				sample_source VARCHAR(20) NOT NULL DEFAULT 'crux_url',
 				recorded_at DATETIME NOT NULL,
 				PRIMARY KEY  (id),
 				KEY url_metric_time (url_hash, metric, recorded_at)

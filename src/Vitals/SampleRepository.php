@@ -13,9 +13,48 @@ if ( ! defined( 'ABSPATH' ) ) {
 // phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Repository for the plugin's own custom table; direct queries are the point. Hot reads are cached at the Vitals\Status snapshot layer.
 final class SampleRepository {
 
+	/** CrUX record for the exact tracked URL. */
+	public const SOURCE_CRUX_URL = 'crux_url';
+
+	/** CrUX record for the whole origin — every page pooled together. */
+	public const SOURCE_CRUX_ORIGIN = 'crux_origin';
+
+	/**
+	 * Rows written before source levels were tracked. Could be either level;
+	 * treated as its own source so it is never averaged with a known one.
+	 */
+	public const SOURCE_CRUX_LEGACY = 'crux';
+
+	/** Aggregated real-user beacons for the exact tracked URL. */
+	public const SOURCE_RUM = 'rum';
+
+	/** Every CrUX-derived source, for "did we already pull today?" checks. */
+	public const CRUX_SOURCES = array( self::SOURCE_CRUX_URL, self::SOURCE_CRUX_ORIGIN, self::SOURCE_CRUX_LEGACY );
+
+	/**
+	 * Preference when more than one source covers the same day: the most
+	 * specific measurement of the tracked URL wins. Origin-level data sits
+	 * below RUM's predecessor 'crux' only because legacy rows are usually
+	 * URL-level, and above 'rum' to preserve "CrUX wins over RUM".
+	 */
+	private const SOURCE_PRIORITY = array(
+		self::SOURCE_CRUX_URL,
+		self::SOURCE_CRUX_LEGACY,
+		self::SOURCE_CRUX_ORIGIN,
+		self::SOURCE_RUM,
+	);
+
 	private function table(): string {
 		global $wpdb;
 		return $wpdb->prefix . 'aftercare_vitals_samples';
+	}
+
+	/**
+	 * ORDER BY fragment ranking rows by source preference. Built from class
+	 * constants only — no user input reaches this string.
+	 */
+	private function priority_sql(): string {
+		return "FIELD(sample_source, '" . implode( "', '", self::SOURCE_PRIORITY ) . "')";
 	}
 
 	public function insert( string $url, string $metric, float $p75, string $source, string $recorded_at ): void {
@@ -52,50 +91,120 @@ final class SampleRepository {
 	}
 
 	/**
-	 * Latest p75 for a given GMT day. CrUX wins over RUM when both exist.
+	 * True when any CrUX-derived sample already exists for that GMT day,
+	 * whatever level it came from. Keeps the daily pull to one API round trip
+	 * even when the client falls back from URL- to origin-level.
 	 */
-	public function p75_for_day( string $url, string $metric, string $day ): ?float {
+	public function has_crux_sample_for_day( string $url, string $metric, string $day ): bool {
 		global $wpdb;
-		$value = $wpdb->get_var(
+		$placeholders = implode( ', ', array_fill( 0, count( self::CRUX_SOURCES ), '%s' ) );
+		$args         = array_merge(
+			array( Util::url_hash( $url ), $metric ),
+			self::CRUX_SOURCES,
+			array( $day . ' 00:00:00', $day . ' 23:59:59' )
+		);
+		return (bool) $wpdb->get_var(
 			$wpdb->prepare(
-				"SELECT p75_value FROM {$this->table()} WHERE url_hash = %s AND metric = %s AND recorded_at >= %s AND recorded_at < %s ORDER BY FIELD(sample_source, 'crux', 'rum'), id DESC LIMIT 1", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				"SELECT id FROM {$this->table()} WHERE url_hash = %s AND metric = %s AND sample_source IN ( {$placeholders} ) AND recorded_at >= %s AND recorded_at < %s LIMIT 1", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				$args
+			)
+		);
+	}
+
+	/**
+	 * Preferred p75 for a given GMT day, with the source it came from. The
+	 * source matters: a URL-level and an origin-level reading describe
+	 * different populations and must never be compared with one another.
+	 *
+	 * @return array{value: float, source: string}|null
+	 */
+	public function latest_for_day( string $url, string $metric, string $day ): ?array {
+		global $wpdb;
+		$row = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT p75_value, sample_source FROM {$this->table()} WHERE url_hash = %s AND metric = %s AND recorded_at >= %s AND recorded_at < %s ORDER BY {$this->priority_sql()}, id DESC LIMIT 1", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 				Util::url_hash( $url ),
 				$metric,
 				$day . ' 00:00:00',
 				$day . ' 23:59:59'
-			)
+			),
+			ARRAY_A
 		);
-		return null === $value ? null : (float) $value;
+		if ( ! $row ) {
+			return null;
+		}
+		return array(
+			'value'  => (float) $row['p75_value'],
+			'source' => (string) $row['sample_source'],
+		);
+	}
+
+	/**
+	 * Latest p75 for a given GMT day, without its source.
+	 *
+	 * @deprecated Use latest_for_day() — comparing values across source levels
+	 *             is what this method makes easy to get wrong.
+	 */
+	public function p75_for_day( string $url, string $metric, string $day ): ?float {
+		$row = $this->latest_for_day( $url, $metric, $day );
+		return null === $row ? null : $row['value'];
 	}
 
 	/**
 	 * Average of daily p75 values between two GMT dates (inclusive start,
-	 * exclusive end). Used as the rolling baseline.
+	 * exclusive end), restricted to a single source. Used as the rolling
+	 * baseline, so the day count comes back with it: a handful of days after a
+	 * source switch is not a baseline worth comparing against.
+	 *
+	 * @return array{value: float, days: int}|null
 	 */
-	public function baseline( string $url, string $metric, string $from_day, string $to_day ): ?float {
+	public function baseline( string $url, string $metric, string $from_day, string $to_day, string $source ): ?array {
 		global $wpdb;
-		$value = $wpdb->get_var(
+		$row = $wpdb->get_row(
 			$wpdb->prepare(
-				"SELECT AVG(p75_value) FROM {$this->table()} WHERE url_hash = %s AND metric = %s AND recorded_at >= %s AND recorded_at < %s", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				"SELECT AVG(daily.value) AS avg_value, COUNT(*) AS days FROM (
+					SELECT DATE(recorded_at) AS day, MIN(p75_value) AS value
+					FROM {$this->table()}
+					WHERE url_hash = %s AND metric = %s AND sample_source = %s AND recorded_at >= %s AND recorded_at < %s
+					GROUP BY DATE(recorded_at)
+				) AS daily", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 				Util::url_hash( $url ),
 				$metric,
+				$source,
 				$from_day . ' 00:00:00',
 				$to_day . ' 00:00:00'
-			)
+			),
+			ARRAY_A
 		);
-		return null === $value ? null : (float) $value;
+		if ( ! $row || null === $row['avg_value'] ) {
+			return null;
+		}
+		return array(
+			'value' => (float) $row['avg_value'],
+			'days'  => (int) $row['days'],
+		);
 	}
 
 	/**
-	 * Daily series for sparklines: [ [ 'day' => 'Y-m-d', 'value' => float ], ... ].
+	 * Daily series for sparklines. One point per day, taken from the highest
+	 * priority source available that day rather than blended across sources,
+	 * so a switch between URL- and origin-level data shows as a real step in
+	 * the chart instead of a smeared average.
 	 *
-	 * @return array<int, array{day: string, value: float}>
+	 * @return array<int, array{day: string, value: float, source: string}>
 	 */
 	public function series( string $url, string $metric, int $days ): array {
 		global $wpdb;
-		$rows = $wpdb->get_results(
+		$priority = $this->priority_sql();
+		$rows     = $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT DATE(recorded_at) AS day, MIN(p75_value) AS value FROM {$this->table()} WHERE url_hash = %s AND metric = %s AND recorded_at >= %s GROUP BY DATE(recorded_at) ORDER BY day ASC", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				"SELECT DATE(recorded_at) AS day,
+					SUBSTRING_INDEX( GROUP_CONCAT( p75_value ORDER BY {$priority}, id DESC ), ',', 1 ) AS value,
+					SUBSTRING_INDEX( GROUP_CONCAT( sample_source ORDER BY {$priority}, id DESC ), ',', 1 ) AS source
+				FROM {$this->table()}
+				WHERE url_hash = %s AND metric = %s AND recorded_at >= %s
+				GROUP BY DATE(recorded_at)
+				ORDER BY day ASC", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 				Util::url_hash( $url ),
 				$metric,
 				Util::days_ago( $days ) . ' 00:00:00'
@@ -104,8 +213,9 @@ final class SampleRepository {
 		);
 		return array_map(
 			static fn( $row ) => array(
-				'day'   => (string) $row['day'],
-				'value' => (float) $row['value'],
+				'day'    => (string) $row['day'],
+				'value'  => (float) $row['value'],
+				'source' => (string) $row['source'],
 			),
 			$rows ?: array()
 		);
