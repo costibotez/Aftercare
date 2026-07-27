@@ -17,7 +17,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/WordPress-6.4%2B-21759b?logo=wordpress&logoColor=white" alt="WordPress 6.4+" />
   <img src="https://img.shields.io/badge/PHP-8.1%2B-777bb4?logo=php&logoColor=white" alt="PHP 8.1+" />
-  <img src="https://img.shields.io/badge/Version-1.0.0-d97706" alt="Version 1.0.0" />
+  <img src="https://img.shields.io/badge/Version-1.0.1-d97706" alt="Version 1.0.1" />
   <img src="https://img.shields.io/badge/License-GPL--2.0--or--later-0f766e" alt="License GPL-2.0-or-later" />
 </p>
 
@@ -49,13 +49,14 @@ Every site on a care plan eventually produces the same two conversations: *"the 
 ## What the free plugin includes
 
 ### 📈 Core Web Vitals monitor
-- Daily p75 values for **LCP, INP, CLS and TTFB** from the Chrome UX Report (real Chrome-user field data), fetched with your own free Google API key — origin-level fallback when URL-level data is thin
+- Daily p75 values for **LCP, INP, CLS and TTFB** from the Chrome UX Report (real Chrome-user field data), fetched with your own free Google API key — origin-level fallback when URL-level data is thin, recorded under its own source so the two levels are never averaged together
 - Optional **real-user monitoring beacon**: ~2 KB, dependency-free (native `PerformanceObserver`), loaded for a configurable sample of visits, aggregated to daily p75 on your own site — no third-party service involved
 - Homepage plus up to 5 tracked URLs, 30 days of history, sparkline trends with pass / warn / fail status pills
 
 ### 💰 Performance budgets & incidents
 - Editable budgets per metric (defaults: LCP 2.5 s, INP 200 ms, CLS 0.1, TTFB 800 ms)
 - A daily p75 over budget — or 20% worse than the 28-day baseline — opens an **incident** with the breach value, budget and baseline
+- The baseline is built from the same data source as the reading it judges, and stays muted until 7 days of same-source history exist — so the day CrUX switches a thin URL-level record to origin-level, you get silence rather than a regression that never happened
 - Email alert on every new incident; automatic resolution when the metric recovers
 - Incident detail shows the raw change timeline from the 72 hours before the breach
 

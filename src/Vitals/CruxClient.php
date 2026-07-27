@@ -34,21 +34,25 @@ final class CruxClient {
 
 		$today = gmdate( 'Y-m-d' );
 		foreach ( Options::tracked_urls() as $url ) {
-			// One CrUX sample per URL per day.
-			if ( $this->samples->has_sample_for_day( $url, 'LCP', 'crux', $today ) ) {
+			// One CrUX sample per URL per day, whichever level it came from.
+			if ( $this->samples->has_crux_sample_for_day( $url, 'LCP', $today ) ) {
 				continue;
 			}
-			$metrics = $this->fetch( $url, $api_key );
-			if ( null === $metrics ) {
+			$result = $this->fetch( $url, $api_key );
+			$source = SampleRepository::SOURCE_CRUX_URL;
+			if ( null === $result ) {
 				// URL-level record too thin: fall back to origin-level data.
-				$metrics = $this->fetch( $url, $api_key, true );
+				// That describes every page on the site, not this URL, so it is
+				// stored under its own source and never averaged with the other.
+				$result = $this->fetch( $url, $api_key, true );
+				$source = SampleRepository::SOURCE_CRUX_ORIGIN;
 			}
-			if ( null === $metrics ) {
+			if ( null === $result ) {
 				continue;
 			}
 			$now = Util::now();
-			foreach ( $metrics as $metric => $p75 ) {
-				$this->samples->insert( $url, $metric, $p75, 'crux', $now );
+			foreach ( $result as $metric => $p75 ) {
+				$this->samples->insert( $url, $metric, $p75, $source, $now );
 			}
 		}
 	}

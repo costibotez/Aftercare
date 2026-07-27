@@ -3,7 +3,7 @@
  * Plugin Name:       Aftercare
  * Plugin URI:        https://github.com/costibotez/aftercare
  * Description:       Daily Core Web Vitals monitoring, a complete change ledger and regression incidents with email alerts. Know what changed, know what it cost — catch performance problems before your visitors do.
- * Version:           1.0.0
+ * Version:           1.0.1
  * Requires at least: 6.4
  * Requires PHP:      8.1
  * Author:            Nomad Developer
@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'AFTERCARE_VERSION', '1.0.0' );
+define( 'AFTERCARE_VERSION', '1.0.1' );
 define( 'AFTERCARE_FILE', __FILE__ );
 define( 'AFTERCARE_DIR', plugin_dir_path( __FILE__ ) );
 define( 'AFTERCARE_URL', plugin_dir_url( __FILE__ ) );
