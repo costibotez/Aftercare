@@ -1,8 +1,6 @@
 <?php
 namespace Aftercare\Core;
 
-use Aftercare\Licensing\License;
-
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -15,8 +13,6 @@ final class Options {
 	public const OPTION = 'aftercare_settings';
 
 	public const METRICS = array( 'LCP', 'INP', 'CLS', 'TTFB' );
-
-	public const FREE_URL_LIMIT = 5; // Tracked URLs beyond the homepage.
 
 	/**
 	 * @return array<string, mixed>
@@ -76,8 +72,8 @@ final class Options {
 	}
 
 	/**
-	 * Tracked URLs: the homepage is always first, followed by the configured
-	 * extras (capped in free mode).
+	 * Tracked URLs: the homepage is always first, followed by every URL the
+	 * site owner configured.
 	 *
 	 * @return string[]
 	 */
@@ -85,9 +81,6 @@ final class Options {
 		$urls  = array( home_url( '/' ) );
 		$extra = self::get( 'tracked_urls' );
 		if ( is_array( $extra ) ) {
-			if ( ! License::is_pro() ) {
-				$extra = array_slice( $extra, 0, self::FREE_URL_LIMIT );
-			}
 			foreach ( $extra as $url ) {
 				$url = esc_url_raw( trim( (string) $url ) );
 				if ( '' !== $url && ! in_array( $url, $urls, true ) ) {
@@ -99,7 +92,7 @@ final class Options {
 	}
 
 	/**
-	 * Budget for one metric, filterable per URL (Pro overrides hook in here).
+	 * Budget for one metric, filterable per URL.
 	 */
 	public static function budget( string $metric, string $url = '' ): float {
 		$budgets = self::get( 'budgets' );
@@ -116,16 +109,28 @@ final class Options {
 	}
 
 	/**
-	 * Vitals sample retention in days.
+	 * Vitals sample retention in days. Thirteen months, so a report can always
+	 * compare a month against the same month a year earlier.
 	 */
 	public static function vitals_retention_days(): int {
-		return License::is_pro() ? 396 : 30; // 13 months vs 30 days.
+		/**
+		 * Filter how many days of vitals samples to keep.
+		 *
+		 * @param int $days Retention window in days.
+		 */
+		return max( 1, (int) apply_filters( 'aftercare_vitals_retention_days', 396 ) );
 	}
 
 	/**
-	 * Ledger retention in days. 0 = unlimited.
+	 * Ledger retention in days. 0 = keep everything.
 	 */
 	public static function ledger_retention_days(): int {
-		return License::is_pro() ? 0 : 90;
+		/**
+		 * Filter how many days of ledger history to keep. Return 0 to keep
+		 * every event, which is the default.
+		 *
+		 * @param int $days Retention window in days, or 0 for unlimited.
+		 */
+		return max( 0, (int) apply_filters( 'aftercare_ledger_retention_days', 0 ) );
 	}
 }

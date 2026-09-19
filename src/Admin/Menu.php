@@ -2,6 +2,7 @@
 namespace Aftercare\Admin;
 
 use Aftercare\Incidents\Repository as IncidentRepository;
+use Aftercare\Reports\Builder as ReportBuilder;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -21,11 +22,17 @@ final class Menu {
 		add_action( 'admin_post_aftercare_save_settings', array( SettingsPage::class, 'handle_save' ) );
 		add_action( 'admin_post_aftercare_incident_status', array( IncidentsPage::class, 'handle_status_change' ) );
 		add_action( 'admin_post_aftercare_ledger_export', array( LedgerPage::class, 'handle_export' ) );
-		add_action( 'admin_post_aftercare_report_generate', array( ReportsPage::class, 'handle_generate' ) );
-		add_action( 'admin_post_aftercare_report_note', array( ReportsPage::class, 'handle_note' ) );
-		add_action( 'admin_post_aftercare_report_send', array( ReportsPage::class, 'handle_send' ) );
-		add_action( 'admin_post_aftercare_report_preview', array( ReportsPage::class, 'handle_preview' ) );
 		add_action( 'admin_post_aftercare_run_now', array( $this, 'handle_run_now' ) );
+
+		// Client reports come from a separate add-on plugin. Without it there
+		// is no reports page and no handlers, rather than a page that exists
+		// but refuses to work.
+		if ( class_exists( ReportBuilder::class ) ) {
+			add_action( 'admin_post_aftercare_report_generate', array( ReportsPage::class, 'handle_generate' ) );
+			add_action( 'admin_post_aftercare_report_note', array( ReportsPage::class, 'handle_note' ) );
+			add_action( 'admin_post_aftercare_report_send', array( ReportsPage::class, 'handle_send' ) );
+			add_action( 'admin_post_aftercare_report_preview', array( ReportsPage::class, 'handle_preview' ) );
+		}
 	}
 
 	public function add_pages(): void {
@@ -50,7 +57,9 @@ final class Menu {
 		add_submenu_page( 'aftercare', __( 'Dashboard', 'aftercare' ), __( 'Dashboard', 'aftercare' ), self::CAP, 'aftercare', $dashboard );
 		add_submenu_page( 'aftercare', __( 'Change Ledger', 'aftercare' ), __( 'Ledger', 'aftercare' ), self::CAP, 'aftercare-ledger', array( new LedgerPage(), 'render' ) );
 		add_submenu_page( 'aftercare', __( 'Incidents', 'aftercare' ), __( 'Incidents', 'aftercare' ) . $badge, self::CAP, 'aftercare-incidents', array( new IncidentsPage(), 'render' ) );
-		add_submenu_page( 'aftercare', __( 'Client Reports', 'aftercare' ), __( 'Reports', 'aftercare' ), self::CAP, 'aftercare-reports', array( new ReportsPage(), 'render' ) );
+		if ( class_exists( ReportBuilder::class ) ) {
+			add_submenu_page( 'aftercare', __( 'Client Reports', 'aftercare' ), __( 'Reports', 'aftercare' ), self::CAP, 'aftercare-reports', array( new ReportsPage(), 'render' ) );
+		}
 		add_submenu_page( 'aftercare', __( 'Aftercare Settings', 'aftercare' ), __( 'Settings', 'aftercare' ), self::CAP, 'aftercare-settings', array( new SettingsPage(), 'render' ) );
 	}
 

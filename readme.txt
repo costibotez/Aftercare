@@ -4,7 +4,7 @@ Tags: core web vitals, performance, monitoring, activity log, client reports
 Requires at least: 6.4
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.0.2
+Stable tag: 1.0.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -22,7 +22,7 @@ It is built for agencies and freelancers who maintain client sites on monthly ca
 
 * Daily p75 values for **LCP, INP, CLS and TTFB** from the Chrome UX Report — real field data from actual Chrome users, fetched with your own free Google API key
 * Optional **real-user monitoring beacon**: ~2 KB, no external libraries or services, loaded for a configurable sample of visits and aggregated to daily p75 on your own site
-* Homepage plus up to 5 tracked URLs, sparkline trends, pass / warn / fail status pills
+* Track the homepage plus as many other URLs as you like, with sparkline trends and pass / warn / fail status pills
 
 = 💰 Performance budgets and incidents =
 
@@ -35,7 +35,7 @@ It is built for agencies and freelancers who maintain client sites on monthly ca
 
 * Records plugin updates (old → new version), activations, deactivations, theme updates and switches, core updates, allow-listed settings changes, content publishes and new users
 * Human-readable entries with the responsible user: "WP Rocket updated 3.15 to 3.16 by admin"
-* Filterable timeline by type and date, CSV export, 90 days of history
+* Filterable timeline by type and date, CSV export, and the full history kept by default
 
 = 🧰 Fits into your workflow =
 
@@ -50,14 +50,9 @@ It is built for agencies and freelancers who maintain client sites on monthly ca
 * No phoning home, no accounts, no external service. CrUX calls go straight from your server to Google with your key; RUM beacons post to your own site's REST API
 * Uninstall removes every table and option unless you choose to keep the data
 
-= Aftercare Pro =
+This plugin is complete in itself. Nothing here is capped, timed or held back: every URL you add is monitored, vitals are kept for thirteen months and the change ledger is kept in full.
 
-The free plugin tells you *that* something regressed and *what changed*. Aftercare Pro tells you **which change probably did it**:
-
-* **Cause attribution** — ranks every change from the 72 hours before a regression with high / medium / low confidence badges, so you fix the right thing first
-* **White-label client reports** — monthly drafts with vitals versus last month, work performed, incidents caught and resolved; your logo, colours and a personal note; print/PDF and email delivery
-* **Slack and webhook notifications**
-* **Unlimited tracked URLs**, per-URL budgets, 13-month history and unlimited ledger retention
+A separate add-on plugin, distributed outside this directory, adds ranked cause attribution and white-label monthly client reports with Slack and webhook delivery. It is not required, and this plugin does not check for a licence, prompt for one or change behaviour without it.
 
 Aftercare is built and maintained by [Nomad Developer](https://www.nomad-developer.co.uk/).
 
@@ -70,10 +65,6 @@ Aftercare does not phone home. CrUX data is fetched directly from Google's API u
 Aftercare connects to the following external services. No connection is made until you configure it.
 
 **Chrome UX Report API (Google)** — used to retrieve real-user Core Web Vitals field data for the URLs you choose to track. Once you enter your own Google API key, the plugin sends your tracked URLs (or your site's origin) together with that API key to `https://chromeuxreport.googleapis.com` once per day per URL. No visitor data, personal data or site content is sent. This service is provided by Google: [Terms of Service](https://developers.google.com/terms), [Privacy Policy](https://policies.google.com/privacy). If no API key is configured, no request is ever made.
-
-**Slack incoming webhooks (Pro, optional)** — if you configure a Slack webhook URL, incident notifications (metric name, measured value, budget, affected URL and your site name) are sent to that URL when a regression is detected or resolved. This service is provided by Slack: [Terms of Service](https://slack.com/terms-of-service), [Privacy Policy](https://slack.com/privacy-policy).
-
-**Generic webhook (Pro, optional)** — if you configure a webhook URL of your own choosing, the same incident data is POSTed to it as JSON. The receiving service is chosen and operated by you; review its terms and privacy policy before configuring it.
 
 == Installation ==
 
@@ -88,9 +79,9 @@ Aftercare connects to the following external services. No connection is made unt
 
 From the Chrome UX Report (field data from real Chrome users), fetched daily with your own Google API key. Optionally, a small RUM beacon collects vitals from your own visitors as a second source.
 
-= Does the free version limit anything? =
+= Does this plugin limit anything? =
 
-Free monitors the homepage plus 5 URLs, keeps 30 days of vitals and 90 days of ledger history, and includes budgets, incidents and email alerts. Pro adds cause attribution, client reports, Slack/webhooks, unlimited URLs and longer retention.
+No. Tracked URLs are unlimited, vitals are kept for thirteen months and the ledger is kept in full. Both retention windows can be shortened with the `aftercare_vitals_retention_days` and `aftercare_ledger_retention_days` filters if you would rather keep the tables small.
 
 = What happens to my data when I delete the plugin? =
 
@@ -108,6 +99,12 @@ Yes. `wp aftercare run` executes the full daily pipeline (CrUX pull, RUM aggrega
 4. Settings — API key, tracked URLs, performance budgets and notifications
 
 == Changelog ==
+
+= 1.0.3 =
+* Removed every limit that depended on a licence check: tracked URLs are unlimited, vitals are kept for thirteen months and the change ledger is kept in full
+* Settings fields are never disabled and are always saved. Settings belonging to the separate add-on are shown only when that add-on is installed, instead of being displayed in a locked state
+* Removed the licensing code, the upgrade prompts and the reports screen that existed only to advertise the add-on. Features now appear when the code implementing them is present
+* Removed the bundled translation files and the load_plugin_textdomain call, since translations come from translate.wordpress.org
 
 = 1.0.2 =
 * Vitals queries now bind the table name and the source ranking list as parameters instead of interpolating them into the SQL string
@@ -131,6 +128,9 @@ Yes. `wp aftercare run` executes the full daily pipeline (CrUX pull, RUM aggrega
 * Pro: cause attribution, white-label client reports, Slack/webhooks, extended retention
 
 == Upgrade Notice ==
+
+= 1.0.3 =
+Tracked URL and history limits are gone. Existing data and settings are untouched, and retention now keeps more than before rather than less.
 
 = 1.0.2 =
 Hardening and documentation fixes only. No changes to stored data or settings.

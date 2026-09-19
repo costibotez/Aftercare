@@ -3,7 +3,7 @@
  * Plugin Name:       Aftercare
  * Plugin URI:        https://github.com/costibotez/aftercare
  * Description:       Daily Core Web Vitals monitoring, a complete change ledger and regression incidents with email alerts. Know what changed, know what it cost — catch performance problems before your visitors do.
- * Version:           1.0.2
+ * Version:           1.0.3
  * Requires at least: 6.4
  * Requires PHP:      8.1
  * Author:            Nomad Developer
@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'AFTERCARE_VERSION', '1.0.2' );
+define( 'AFTERCARE_VERSION', '1.0.3' );
 define( 'AFTERCARE_FILE', __FILE__ );
 define( 'AFTERCARE_DIR', plugin_dir_path( __FILE__ ) );
 define( 'AFTERCARE_URL', plugin_dir_url( __FILE__ ) );
@@ -47,57 +47,8 @@ spl_autoload_register(
 	}
 );
 
-/*
- * Freemius SDK loader. The SDK is not bundled with the repository; drop it in
- * vendor/freemius and it will be picked up. Without it the plugin runs in
- * free mode (see Aftercare\Licensing\License).
- */
-if ( file_exists( AFTERCARE_DIR . 'vendor/freemius/start.php' ) && ! function_exists( 'aftercare_fs' ) ) {
-	/**
-	 * Returns the Freemius instance for Aftercare.
-	 *
-	 * @return object
-	 */
-	function aftercare_fs() {
-		global $aftercare_fs;
-		if ( ! isset( $aftercare_fs ) ) {
-			require_once AFTERCARE_DIR . 'vendor/freemius/start.php';
-			$aftercare_fs = fs_dynamic_init(
-				array(
-					'id'             => '00000',
-					'slug'           => 'aftercare',
-					'type'           => 'plugin',
-					'public_key'     => 'pk_REPLACE_ME',
-					'is_premium'     => false,
-					'has_addons'     => false,
-					'has_paid_plans' => true,
-					'menu'           => array(
-						'slug'    => 'aftercare',
-						'support' => false,
-					),
-				)
-			);
-		}
-		return $aftercare_fs;
-	}
-	aftercare_fs();
-	do_action( 'aftercare_fs_loaded' );
-}
-
 register_activation_hook( __FILE__, array( 'Aftercare\\Core\\Activator', 'activate' ) );
 register_deactivation_hook( __FILE__, array( 'Aftercare\\Core\\Activator', 'deactivate' ) );
-
-// Since WP 6.7 translations must not load before the init hook.
-add_action(
-	'init',
-	static function () {
-		// Kept deliberately: WordPress.org auto-loads language packs, but the
-		// bundled ro_RO translation must also load on installs that do not
-		// receive packs (e.g. the premium build distributed off-directory).
-		load_plugin_textdomain( 'aftercare', false, dirname( plugin_basename( AFTERCARE_FILE ) ) . '/languages' ); // phpcs:ignore PluginCheck.CodeAnalysis.DiscouragedFunctions.load_plugin_textdomainFound
-	},
-	0
-);
 
 add_action(
 	'plugins_loaded',

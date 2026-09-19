@@ -2,21 +2,28 @@
 namespace Aftercare\Admin;
 
 use Aftercare\Core\Options;
-use Aftercare\Licensing\License;
+use Aftercare\Notifications\Slack;
+use Aftercare\Notifications\Webhook;
+use Aftercare\Reports\Builder as ReportBuilder;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
 /**
- * Settings: tracked URLs, budgets, RUM, notifications, branding (Pro),
+ * Settings: tracked URLs, budgets, RUM, notifications, branding,
  * data retention and license.
  */
 final class SettingsPage {
 
 	public function render(): void {
 		$options = Options::all();
-		$is_pro  = License::is_pro();
+
+		// Settings for features that live in separate add-on plugins are shown
+		// only when that add-on is installed, so nothing here is ever a field
+		// the site owner can see but not use.
+		$has_notifiers = class_exists( Slack::class ) && class_exists( Webhook::class );
+		$has_reports   = class_exists( ReportBuilder::class );
 
 		Menu::header( __( 'Aftercare Settings', 'aftercare' ) );
 
@@ -40,10 +47,9 @@ final class SettingsPage {
 		echo '<textarea id="ac-urls" name="tracked_urls" rows="5" class="large-text code" placeholder="' . esc_attr( home_url( '/pricing/' ) ) . '">' . esc_textarea( implode( "\n", (array) $options['tracked_urls'] ) ) . '</textarea>';
 		echo '<p class="description">';
 		printf(
-			/* translators: 1: homepage URL, 2: URL limit */
-			esc_html__( 'One per line. The homepage (%1$s) is always tracked. Free monitors up to %2$d extra URLs; Pro is unlimited.', 'aftercare' ),
-			esc_html( home_url( '/' ) ),
-			(int) Options::FREE_URL_LIMIT
+			/* translators: %s: homepage URL */
+			esc_html__( 'One per line. The homepage (%s) is always tracked, and there is no limit on how many more you add.', 'aftercare' ),
+			esc_html( home_url( '/' ) )
 		);
 		echo '</p></td></tr>';
 
@@ -84,67 +90,57 @@ final class SettingsPage {
 		echo '<label><input type="checkbox" name="weekly_digest" value="1" ' . checked( (bool) $options['weekly_digest'], true, false ) . ' /> ' . esc_html__( 'Send a weekly summary email: vitals status, changes made and incidents from the past 7 days', 'aftercare' ) . '</label>';
 		echo '</td></tr>';
 
-		$pro_attr = $is_pro ? '' : ' disabled';
-		$pro_note = $is_pro ? '' : ' <span class="aftercare-badge aftercare-badge-medium">' . esc_html__( 'Pro', 'aftercare' ) . '</span>';
+		if ( $has_notifiers ) {
+			echo '<tr><th scope="row"><label for="ac-slack">' . esc_html__( 'Slack webhook URL', 'aftercare' ) . '</label></th><td>';
+			echo '<input type="url" id="ac-slack" name="slack_webhook" value="' . esc_attr( (string) $options['slack_webhook'] ) . '" class="regular-text" />';
+			echo '</td></tr>';
 
-		echo '<tr><th scope="row"><label for="ac-slack">' . esc_html__( 'Slack webhook URL', 'aftercare' ) . wp_kses_post( $pro_note ) . '</label></th><td>';
-		echo '<input type="url" id="ac-slack" name="slack_webhook" value="' . esc_attr( (string) $options['slack_webhook'] ) . '" class="regular-text"' . esc_attr( $pro_attr ) . ' />';
-		echo '</td></tr>';
-
-		echo '<tr><th scope="row"><label for="ac-webhook">' . esc_html__( 'Generic webhook URL', 'aftercare' ) . wp_kses_post( $pro_note ) . '</label></th><td>';
-		echo '<input type="url" id="ac-webhook" name="webhook_url" value="' . esc_attr( (string) $options['webhook_url'] ) . '" class="regular-text"' . esc_attr( $pro_attr ) . ' />';
-		echo '<p class="description">' . esc_html__( 'Incidents are POSTed as JSON.', 'aftercare' ) . '</p>';
-		echo '</td></tr>';
-
-		echo '</table>';
-
-		echo '<h2>' . esc_html__( 'Client reports & branding', 'aftercare' ) . wp_kses_post( $pro_note ) . '</h2>';
-		echo '<table class="form-table" role="presentation">';
-
-		echo '<tr><th scope="row"><label for="ac-recipients">' . esc_html__( 'Client recipients', 'aftercare' ) . '</label></th><td>';
-		echo '<input type="text" id="ac-recipients" name="client_recipients" value="' . esc_attr( (string) $options['client_recipients'] ) . '" class="regular-text"' . esc_attr( $pro_attr ) . ' />';
-		echo '<p class="description">' . esc_html__( 'Comma-separated email addresses that receive the monthly report.', 'aftercare' ) . '</p>';
-		echo '</td></tr>';
-
-		$branding = (array) $options['branding'];
-		echo '<tr><th scope="row"><label for="ac-logo">' . esc_html__( 'Logo URL', 'aftercare' ) . '</label></th><td>';
-		echo '<input type="url" id="ac-logo" name="branding[logo_url]" value="' . esc_attr( (string) $branding['logo_url'] ) . '" class="regular-text"' . esc_attr( $pro_attr ) . ' />';
-		echo '</td></tr>';
-		echo '<tr><th scope="row"><label for="ac-accent">' . esc_html__( 'Accent colour', 'aftercare' ) . '</label></th><td>';
-		echo '<input type="text" id="ac-accent" name="branding[accent]" value="' . esc_attr( (string) $branding['accent'] ) . '" class="small-text code" placeholder="#0f766e"' . esc_attr( $pro_attr ) . ' />';
-		echo '</td></tr>';
-		echo '<tr><th scope="row"><label for="ac-footer">' . esc_html__( 'Report footer text', 'aftercare' ) . '</label></th><td>';
-		echo '<input type="text" id="ac-footer" name="branding[footer_text]" value="' . esc_attr( (string) $branding['footer_text'] ) . '" class="regular-text"' . esc_attr( $pro_attr ) . ' />';
-		echo '</td></tr>';
-		echo '<tr><th scope="row"><label for="ac-sender">' . esc_html__( 'Sender name', 'aftercare' ) . '</label></th><td>';
-		echo '<input type="text" id="ac-sender" name="branding[sender_name]" value="' . esc_attr( (string) $branding['sender_name'] ) . '" class="regular-text"' . esc_attr( $pro_attr ) . ' />';
-		echo '</td></tr>';
-		echo '<tr><th scope="row"><label for="ac-replyto">' . esc_html__( 'Reply-to address', 'aftercare' ) . '</label></th><td>';
-		echo '<input type="email" id="ac-replyto" name="branding[reply_to]" value="' . esc_attr( (string) $branding['reply_to'] ) . '" class="regular-text"' . esc_attr( $pro_attr ) . ' />';
-		echo '</td></tr>';
+			echo '<tr><th scope="row"><label for="ac-webhook">' . esc_html__( 'Generic webhook URL', 'aftercare' ) . '</label></th><td>';
+			echo '<input type="url" id="ac-webhook" name="webhook_url" value="' . esc_attr( (string) $options['webhook_url'] ) . '" class="regular-text" />';
+			echo '<p class="description">' . esc_html__( 'Incidents are POSTed as JSON.', 'aftercare' ) . '</p>';
+			echo '</td></tr>';
+		}
 
 		echo '</table>';
+
+		if ( $has_reports ) {
+			echo '<h2>' . esc_html__( 'Client reports & branding', 'aftercare' ) . '</h2>';
+			echo '<table class="form-table" role="presentation">';
+
+			echo '<tr><th scope="row"><label for="ac-recipients">' . esc_html__( 'Client recipients', 'aftercare' ) . '</label></th><td>';
+			echo '<input type="text" id="ac-recipients" name="client_recipients" value="' . esc_attr( (string) $options['client_recipients'] ) . '" class="regular-text" />';
+			echo '<p class="description">' . esc_html__( 'Comma-separated email addresses that receive the monthly report.', 'aftercare' ) . '</p>';
+			echo '</td></tr>';
+
+			$branding = (array) $options['branding'];
+			echo '<tr><th scope="row"><label for="ac-logo">' . esc_html__( 'Logo URL', 'aftercare' ) . '</label></th><td>';
+			echo '<input type="url" id="ac-logo" name="branding[logo_url]" value="' . esc_attr( (string) $branding['logo_url'] ) . '" class="regular-text" />';
+			echo '</td></tr>';
+			echo '<tr><th scope="row"><label for="ac-accent">' . esc_html__( 'Accent colour', 'aftercare' ) . '</label></th><td>';
+			echo '<input type="text" id="ac-accent" name="branding[accent]" value="' . esc_attr( (string) $branding['accent'] ) . '" class="small-text code" placeholder="#0f766e" />';
+			echo '</td></tr>';
+			echo '<tr><th scope="row"><label for="ac-footer">' . esc_html__( 'Report footer text', 'aftercare' ) . '</label></th><td>';
+			echo '<input type="text" id="ac-footer" name="branding[footer_text]" value="' . esc_attr( (string) $branding['footer_text'] ) . '" class="regular-text" />';
+			echo '</td></tr>';
+			echo '<tr><th scope="row"><label for="ac-sender">' . esc_html__( 'Sender name', 'aftercare' ) . '</label></th><td>';
+			echo '<input type="text" id="ac-sender" name="branding[sender_name]" value="' . esc_attr( (string) $branding['sender_name'] ) . '" class="regular-text" />';
+			echo '</td></tr>';
+			echo '<tr><th scope="row"><label for="ac-replyto">' . esc_html__( 'Reply-to address', 'aftercare' ) . '</label></th><td>';
+			echo '<input type="email" id="ac-replyto" name="branding[reply_to]" value="' . esc_attr( (string) $branding['reply_to'] ) . '" class="regular-text" />';
+			echo '</td></tr>';
+
+			echo '</table>';
+		}
 
 		echo '<h2>' . esc_html__( 'Data', 'aftercare' ) . '</h2>';
 		echo '<table class="form-table" role="presentation">';
 		echo '<tr><th scope="row">' . esc_html__( 'Retention', 'aftercare' ) . '</th><td><p class="description">';
-		if ( $is_pro ) {
-			echo esc_html__( 'Pro: 13 months of vitals history, unlimited ledger.', 'aftercare' );
-		} else {
-			echo esc_html__( 'Free: 30 days of vitals history, 90 days of ledger. Pro extends this to 13 months and unlimited.', 'aftercare' );
-		}
+		echo esc_html__( 'Aftercare keeps 13 months of vitals history and the complete change ledger. Both windows can be shortened with the aftercare_vitals_retention_days and aftercare_ledger_retention_days filters.', 'aftercare' );
 		echo '</p></td></tr>';
 		echo '<tr><th scope="row">' . esc_html__( 'Uninstall', 'aftercare' ) . '</th><td>';
 		echo '<label><input type="checkbox" name="keep_data_on_uninstall" value="1" ' . checked( (bool) $options['keep_data_on_uninstall'], true, false ) . ' /> ' . esc_html__( 'Keep Aftercare data (tables and settings) when the plugin is deleted', 'aftercare' ) . '</label>';
 		echo '</td></tr>';
 		echo '</table>';
-
-		if ( ! $is_pro ) {
-			echo '<div class="aftercare-upsell">';
-			echo '<p><strong>' . esc_html__( 'Aftercare Pro', 'aftercare' ) . '</strong> — ' . esc_html__( 'cause attribution, white-label client reports, Slack & webhooks, unlimited URLs and 13-month history.', 'aftercare' ) . '</p>';
-			echo '<a class="button button-primary" href="' . esc_url( License::upgrade_url() ) . '">' . esc_html__( 'See plans', 'aftercare' ) . '</a>';
-			echo '</div>';
-		}
 
 		submit_button( __( 'Save settings', 'aftercare' ) );
 		echo '</form>';
@@ -184,12 +180,17 @@ final class SettingsPage {
 			'keep_data_on_uninstall' => ! empty( $_POST['keep_data_on_uninstall'] ),
 		);
 
-		if ( License::is_pro() ) {
+		// Only write add-on settings that were actually rendered, so a stored
+		// value is never silently cleared by a form that did not contain it.
+		if ( class_exists( Slack::class ) && class_exists( Webhook::class ) ) {
+			$new['slack_webhook'] = esc_url_raw( wp_unslash( $_POST['slack_webhook'] ?? '' ) );
+			$new['webhook_url']   = esc_url_raw( wp_unslash( $_POST['webhook_url'] ?? '' ) );
+		}
+
+		if ( class_exists( ReportBuilder::class ) ) {
 			$branding_in = (array) wp_unslash( $_POST['branding'] ?? array() );
 			$accent      = sanitize_hex_color( (string) ( $branding_in['accent'] ?? '' ) );
 
-			$new['slack_webhook']     = esc_url_raw( wp_unslash( $_POST['slack_webhook'] ?? '' ) );
-			$new['webhook_url']       = esc_url_raw( wp_unslash( $_POST['webhook_url'] ?? '' ) );
 			$new['client_recipients'] = sanitize_text_field( wp_unslash( $_POST['client_recipients'] ?? '' ) );
 			$new['branding']          = array(
 				'logo_url'    => esc_url_raw( (string) ( $branding_in['logo_url'] ?? '' ) ),

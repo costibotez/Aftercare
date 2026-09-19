@@ -4,9 +4,18 @@
 # The premium build (Freemius deployment) includes them.
 src/Incidents/Attribution.php
 src/Reports
+src/Admin/ReportsPage.php
 src/Notifications/Slack.php
 src/Notifications/Webhook.php
 templates/report-default.php
+
+# Licensing. The directory build checks no licence and gates no feature, so it
+# ships none of this code.
+src/Licensing
+
+# Translations come from translate.wordpress.org for directory plugins, so the
+# build ships no .po, .mo or .pot files.
+languages
 
 # Repository files.
 .wordpress-org

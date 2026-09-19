@@ -3,8 +3,8 @@ namespace Aftercare\Admin;
 
 use Aftercare\Core\Util;
 use Aftercare\Incidents\Repository as IncidentRepository;
+use Aftercare\Incidents\Attribution;
 use Aftercare\Ledger\Repository as LedgerRepository;
-use Aftercare\Licensing\License;
 use Aftercare\Vitals\SampleRepository;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -114,12 +114,14 @@ final class IncidentsPage {
 		echo '</form>';
 		echo '</div>';
 
-		// Attribution: ranked causes (Pro) or upsell + raw timeline (free).
+		// Ranked cause attribution comes from the separate add-on. Without it
+		// the page shows the raw ledger window on its own, which is the same
+		// evidence in unranked form.
 		echo '<div class="aftercare-columns">';
 
-		echo '<div class="aftercare-panel">';
-		echo '<h2>' . esc_html__( 'Probable cause', 'aftercare' ) . '</h2>';
-		if ( License::is_pro() ) {
+		if ( class_exists( Attribution::class ) ) {
+			echo '<div class="aftercare-panel">';
+			echo '<h2>' . esc_html__( 'Probable cause', 'aftercare' ) . '</h2>';
 			$causes = json_decode( (string) ( $incident['causes'] ?? '' ), true );
 			if ( is_array( $causes ) && $causes ) {
 				echo '<ol class="aftercare-causes">';
@@ -137,16 +139,10 @@ final class IncidentsPage {
 			} else {
 				echo '<p class="aftercare-subtle">' . esc_html__( 'No attribution data recorded for this incident.', 'aftercare' ) . '</p>';
 			}
-		} else {
-			echo '<div class="aftercare-upsell">';
-			echo '<p><strong>' . esc_html__( 'Aftercare Pro tells you which change probably did this.', 'aftercare' ) . '</strong></p>';
-			echo '<p>' . esc_html__( 'Pro ranks every change from the 72 hours before the regression with a confidence score — plugin updates, activations, publishes, settings — so you fix the right thing first.', 'aftercare' ) . '</p>';
-			echo '<a class="button button-primary" href="' . esc_url( License::upgrade_url() ) . '">' . esc_html__( 'Upgrade to Pro', 'aftercare' ) . '</a>';
 			echo '</div>';
 		}
-		echo '</div>';
 
-		// Raw ledger window — free and Pro both see this.
+		// Raw ledger window.
 		echo '<div class="aftercare-panel">';
 		echo '<h2>' . esc_html__( 'Changes in the 72 hours before the breach', 'aftercare' ) . '</h2>';
 		$from   = gmdate( 'Y-m-d H:i:s', strtotime( $incident['opened_at'] . ' UTC' ) - 72 * HOUR_IN_SECONDS );

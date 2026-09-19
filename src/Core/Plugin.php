@@ -9,7 +9,6 @@ use Aftercare\Admin\SiteHealth;
 use Aftercare\Incidents\Repository as IncidentRepository;
 use Aftercare\Ledger\Listeners;
 use Aftercare\Ledger\Repository as LedgerRepository;
-use Aftercare\Licensing\License;
 use Aftercare\Notifications\Emailer;
 use Aftercare\Notifications\Slack;
 use Aftercare\Notifications\Webhook;
@@ -62,8 +61,8 @@ final class Plugin {
 		// Notifications subscribe to incident lifecycle actions.
 		( new Emailer() )->register();
 		( new WeeklyDigest() )->register();
-		// Slack/webhook notifiers ship only in the premium build.
-		if ( License::is_pro() && class_exists( Slack::class ) && class_exists( Webhook::class ) ) {
+		// The Slack and webhook notifiers live in the separate add-on plugin.
+		if ( class_exists( Slack::class ) && class_exists( Webhook::class ) ) {
 			( new Slack() )->register();
 			( new Webhook() )->register();
 		}
