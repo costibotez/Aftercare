@@ -2,14 +2,13 @@
 namespace Aftercare\Admin;
 
 use Aftercare\Ledger\Repository as LedgerRepository;
-use Aftercare\Licensing\License;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
 /**
- * Filterable change timeline with pagination and Pro CSV export.
+ * Filterable change timeline with pagination and CSV export.
  */
 final class LedgerPage {
 
@@ -97,10 +96,6 @@ final class LedgerPage {
 				) ?? ''
 			);
 			echo '</div></div>';
-		}
-
-		if ( ! License::is_pro() ) {
-			echo '<p class="aftercare-subtle">' . esc_html__( 'Free keeps 90 days of history. Aftercare Pro keeps the ledger forever.', 'aftercare' ) . '</p>';
 		}
 
 		Menu::footer();

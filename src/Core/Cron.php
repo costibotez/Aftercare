@@ -3,7 +3,6 @@ namespace Aftercare\Core;
 
 use Aftercare\Ledger\Listeners;
 use Aftercare\Ledger\Repository as LedgerRepository;
-use Aftercare\Licensing\License;
 use Aftercare\Reports\Builder as ReportBuilder;
 use Aftercare\Vitals\BreachDetector;
 use Aftercare\Vitals\CruxClient;
@@ -104,9 +103,9 @@ final class Cron {
 		Listeners::snapshot_plugin_versions();
 		\Aftercare\Vitals\Status::flush_cache();
 
-		// 6. Pro: draft last month's client report on the 1st of each month.
-		// The report builder ships only in the premium build.
-		if ( License::is_pro() && class_exists( ReportBuilder::class ) && '1' === gmdate( 'j' ) ) {
+		// 6. Draft last month's client report on the 1st of each month, when
+		//    the report builder add-on is installed.
+		if ( class_exists( ReportBuilder::class ) && '1' === gmdate( 'j' ) ) {
 			$prev_month = (int) gmdate( 'n', strtotime( 'first day of last month' ) );
 			$prev_year  = (int) gmdate( 'Y', strtotime( 'first day of last month' ) );
 			( new ReportBuilder() )->generate_draft( $prev_month, $prev_year );

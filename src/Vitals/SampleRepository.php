@@ -50,14 +50,17 @@ final class SampleRepository {
 	}
 
 	/**
-	 * ORDER BY fragment ranking rows by source preference. The source values
-	 * themselves are passed as bound parameters, so the fragment is a fixed
-	 * string of placeholders and carries no data of its own.
+	 * Guards the literal placeholder runs written into the queries below.
 	 *
-	 * @see self::SOURCE_PRIORITY for the matching argument list.
+	 * The SQL in this class is deliberately written as literal strings with no
+	 * interpolation, so `FIELD(sample_source, %s, %s, %s, %s)` and
+	 * `IN ( %s, %s, %s )` hard-code the lengths of SOURCE_PRIORITY and
+	 * CRUX_SOURCES. Adding a source without updating those runs would shift
+	 * every following argument, so fail loudly in development instead.
 	 */
-	private function priority_sql(): string {
-		return 'FIELD(sample_source, ' . implode( ', ', array_fill( 0, count( self::SOURCE_PRIORITY ), '%s' ) ) . ')';
+	private function assert_source_counts(): void {
+		assert( 4 === count( self::SOURCE_PRIORITY ), 'SOURCE_PRIORITY changed: update the FIELD() placeholder runs in this class.' );
+		assert( 3 === count( self::CRUX_SOURCES ), 'CRUX_SOURCES changed: update the IN () placeholder run in this class.' );
 	}
 
 	public function insert( string $url, string $metric, float $p75, string $source, string $recorded_at ): void {
@@ -101,21 +104,20 @@ final class SampleRepository {
 	 */
 	public function has_crux_sample_for_day( string $url, string $metric, string $day ): bool {
 		global $wpdb;
-		$placeholders = implode( ', ', array_fill( 0, count( self::CRUX_SOURCES ), '%s' ) );
-		$args         = array_merge(
-			array( $this->table(), Util::url_hash( $url ), $metric ),
-			self::CRUX_SOURCES,
-			array( $day . ' 00:00:00', $day . ' 23:59:59' )
-		);
-		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- $placeholders is a fixed run of %s built from a class constant, and every value, the table name included, is bound through $args.
-		$found = $wpdb->get_var(
+		$this->assert_source_counts();
+		return (bool) $wpdb->get_var(
 			$wpdb->prepare(
-				"SELECT id FROM %i WHERE url_hash = %s AND metric = %s AND sample_source IN ( {$placeholders} ) AND recorded_at >= %s AND recorded_at < %s LIMIT 1",
-				$args
+				'SELECT id FROM %i WHERE url_hash = %s AND metric = %s AND sample_source IN ( %s, %s, %s ) AND recorded_at >= %s AND recorded_at < %s LIMIT 1',
+				$this->table(),
+				Util::url_hash( $url ),
+				$metric,
+				self::SOURCE_CRUX_URL,
+				self::SOURCE_CRUX_ORIGIN,
+				self::SOURCE_CRUX_LEGACY,
+				$day . ' 00:00:00',
+				$day . ' 23:59:59'
 			)
 		);
-		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
-		return (bool) $found;
 	}
 
 	/**
@@ -127,24 +129,25 @@ final class SampleRepository {
 	 */
 	public function latest_for_day( string $url, string $metric, string $day ): ?array {
 		global $wpdb;
-		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- priority_sql() is a fixed run of placeholders; the source values are bound through the argument list below.
+		$this->assert_source_counts();
 		$row = $wpdb->get_row(
 			$wpdb->prepare(
-				"SELECT p75_value, sample_source FROM %i WHERE url_hash = %s AND metric = %s AND recorded_at >= %s AND recorded_at < %s ORDER BY {$this->priority_sql()}, id DESC LIMIT 1",
-				array_merge(
-					array(
-						$this->table(),
-						Util::url_hash( $url ),
-						$metric,
-						$day . ' 00:00:00',
-						$day . ' 23:59:59',
-					),
-					self::SOURCE_PRIORITY
-				)
+				'SELECT p75_value, sample_source FROM %i
+				WHERE url_hash = %s AND metric = %s AND recorded_at >= %s AND recorded_at < %s
+				ORDER BY FIELD(sample_source, %s, %s, %s, %s), id DESC
+				LIMIT 1',
+				$this->table(),
+				Util::url_hash( $url ),
+				$metric,
+				$day . ' 00:00:00',
+				$day . ' 23:59:59',
+				self::SOURCE_CRUX_URL,
+				self::SOURCE_CRUX_LEGACY,
+				self::SOURCE_CRUX_ORIGIN,
+				self::SOURCE_RUM
 			),
 			ARRAY_A
 		);
-		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
 		if ( ! $row ) {
 			return null;
 		}
@@ -211,31 +214,31 @@ final class SampleRepository {
 	 */
 	public function series( string $url, string $metric, int $days ): array {
 		global $wpdb;
-		$priority = $this->priority_sql();
-		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- $priority is a fixed run of placeholders from priority_sql(); the source values are bound through the argument list below.
+		$this->assert_source_counts();
 		$rows = $wpdb->get_results(
 			$wpdb->prepare(
 				"SELECT DATE(recorded_at) AS day,
-					SUBSTRING_INDEX( GROUP_CONCAT( p75_value ORDER BY {$priority}, id DESC ), ',', 1 ) AS value,
-					SUBSTRING_INDEX( GROUP_CONCAT( sample_source ORDER BY {$priority}, id DESC ), ',', 1 ) AS source
+					SUBSTRING_INDEX( GROUP_CONCAT( p75_value ORDER BY FIELD(sample_source, %s, %s, %s, %s), id DESC ), ',', 1 ) AS value,
+					SUBSTRING_INDEX( GROUP_CONCAT( sample_source ORDER BY FIELD(sample_source, %s, %s, %s, %s), id DESC ), ',', 1 ) AS source
 				FROM %i
 				WHERE url_hash = %s AND metric = %s AND recorded_at >= %s
 				GROUP BY DATE(recorded_at)
 				ORDER BY day ASC",
-				array_merge(
-					self::SOURCE_PRIORITY,
-					self::SOURCE_PRIORITY,
-					array(
-						$this->table(),
-						Util::url_hash( $url ),
-						$metric,
-						Util::days_ago( $days ) . ' 00:00:00',
-					)
-				)
+				self::SOURCE_CRUX_URL,
+				self::SOURCE_CRUX_LEGACY,
+				self::SOURCE_CRUX_ORIGIN,
+				self::SOURCE_RUM,
+				self::SOURCE_CRUX_URL,
+				self::SOURCE_CRUX_LEGACY,
+				self::SOURCE_CRUX_ORIGIN,
+				self::SOURCE_RUM,
+				$this->table(),
+				Util::url_hash( $url ),
+				$metric,
+				Util::days_ago( $days ) . ' 00:00:00'
 			),
 			ARRAY_A
 		);
-		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
 		return array_map(
 			static fn( $row ) => array(
 				'day'    => (string) $row['day'],
