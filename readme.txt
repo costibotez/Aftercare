@@ -4,7 +4,7 @@ Tags: core web vitals, performance, monitoring, activity log, client reports
 Requires at least: 6.4
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.0.1
+Stable tag: 1.0.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -96,6 +96,10 @@ Free monitors the homepage plus 5 URLs, keeps 30 days of vitals and 90 days of l
 
 By default all Aftercare tables and options are removed on uninstall. Tick "Keep Aftercare data" in Settings to preserve them.
 
+= Can I run the checks from a server cron instead of WP-Cron? =
+
+Yes. `wp aftercare run` executes the full daily pipeline (CrUX pull, RUM aggregation, breach detection, retention). Aftercare also uses Action Scheduler automatically when another plugin (such as WooCommerce) provides it.
+
 == Screenshots ==
 
 1. Dashboard — vitals cards with budgets, status pills, sparklines, incidents and recent changes
@@ -103,11 +107,12 @@ By default all Aftercare tables and options are removed on uninstall. Tick "Keep
 3. Incident detail — breach versus budget and baseline, with the changes from the 72 hours before (ranked cause attribution shown is a Pro feature)
 4. Settings — API key, tracked URLs, performance budgets and notifications
 
-= Can I run the checks from a server cron instead of WP-Cron? =
-
-Yes. `wp aftercare run` executes the full daily pipeline (CrUX pull, RUM aggregation, breach detection, retention). Aftercare also uses Action Scheduler automatically when another plugin (such as WooCommerce) provides it.
-
 == Changelog ==
+
+= 1.0.2 =
+* Vitals queries now bind the table name and the source ranking list as parameters instead of interpolating them into the SQL string
+* Readme: a Frequently Asked Questions entry that had been placed inside the Screenshots section now renders where it belongs
+* Declared compatibility with WordPress 7.1
 
 = 1.0.1 =
 * CrUX samples now record which level they came from — `crux_url` (the tracked URL) or `crux_origin` (the whole site, used when the URL-level record is too thin)
@@ -126,6 +131,9 @@ Yes. `wp aftercare run` executes the full daily pipeline (CrUX pull, RUM aggrega
 * Pro: cause attribution, white-label client reports, Slack/webhooks, extended retention
 
 == Upgrade Notice ==
+
+= 1.0.2 =
+Hardening and documentation fixes only. No changes to stored data or settings.
 
 = 1.0.0 =
 Initial release.

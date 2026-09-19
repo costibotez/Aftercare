@@ -50,11 +50,14 @@ final class SampleRepository {
 	}
 
 	/**
-	 * ORDER BY fragment ranking rows by source preference. Built from class
-	 * constants only — no user input reaches this string.
+	 * ORDER BY fragment ranking rows by source preference. The source values
+	 * themselves are passed as bound parameters, so the fragment is a fixed
+	 * string of placeholders and carries no data of its own.
+	 *
+	 * @see self::SOURCE_PRIORITY for the matching argument list.
 	 */
 	private function priority_sql(): string {
-		return "FIELD(sample_source, '" . implode( "', '", self::SOURCE_PRIORITY ) . "')";
+		return 'FIELD(sample_source, ' . implode( ', ', array_fill( 0, count( self::SOURCE_PRIORITY ), '%s' ) ) . ')';
 	}
 
 	public function insert( string $url, string $metric, float $p75, string $source, string $recorded_at ): void {
@@ -80,7 +83,8 @@ final class SampleRepository {
 		global $wpdb;
 		return (bool) $wpdb->get_var(
 			$wpdb->prepare(
-				"SELECT id FROM {$this->table()} WHERE url_hash = %s AND metric = %s AND sample_source = %s AND recorded_at >= %s AND recorded_at < %s LIMIT 1", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				'SELECT id FROM %i WHERE url_hash = %s AND metric = %s AND sample_source = %s AND recorded_at >= %s AND recorded_at < %s LIMIT 1',
+				$this->table(),
 				Util::url_hash( $url ),
 				$metric,
 				$source,
@@ -99,16 +103,19 @@ final class SampleRepository {
 		global $wpdb;
 		$placeholders = implode( ', ', array_fill( 0, count( self::CRUX_SOURCES ), '%s' ) );
 		$args         = array_merge(
-			array( Util::url_hash( $url ), $metric ),
+			array( $this->table(), Util::url_hash( $url ), $metric ),
 			self::CRUX_SOURCES,
 			array( $day . ' 00:00:00', $day . ' 23:59:59' )
 		);
-		return (bool) $wpdb->get_var(
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- $placeholders is a fixed run of %s built from a class constant, and every value, the table name included, is bound through $args.
+		$found = $wpdb->get_var(
 			$wpdb->prepare(
-				"SELECT id FROM {$this->table()} WHERE url_hash = %s AND metric = %s AND sample_source IN ( {$placeholders} ) AND recorded_at >= %s AND recorded_at < %s LIMIT 1", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				"SELECT id FROM %i WHERE url_hash = %s AND metric = %s AND sample_source IN ( {$placeholders} ) AND recorded_at >= %s AND recorded_at < %s LIMIT 1",
 				$args
 			)
 		);
+		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
+		return (bool) $found;
 	}
 
 	/**
@@ -120,16 +127,24 @@ final class SampleRepository {
 	 */
 	public function latest_for_day( string $url, string $metric, string $day ): ?array {
 		global $wpdb;
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- priority_sql() is a fixed run of placeholders; the source values are bound through the argument list below.
 		$row = $wpdb->get_row(
 			$wpdb->prepare(
-				"SELECT p75_value, sample_source FROM {$this->table()} WHERE url_hash = %s AND metric = %s AND recorded_at >= %s AND recorded_at < %s ORDER BY {$this->priority_sql()}, id DESC LIMIT 1", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-				Util::url_hash( $url ),
-				$metric,
-				$day . ' 00:00:00',
-				$day . ' 23:59:59'
+				"SELECT p75_value, sample_source FROM %i WHERE url_hash = %s AND metric = %s AND recorded_at >= %s AND recorded_at < %s ORDER BY {$this->priority_sql()}, id DESC LIMIT 1",
+				array_merge(
+					array(
+						$this->table(),
+						Util::url_hash( $url ),
+						$metric,
+						$day . ' 00:00:00',
+						$day . ' 23:59:59',
+					),
+					self::SOURCE_PRIORITY
+				)
 			),
 			ARRAY_A
 		);
+		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
 		if ( ! $row ) {
 			return null;
 		}
@@ -162,12 +177,13 @@ final class SampleRepository {
 		global $wpdb;
 		$row = $wpdb->get_row(
 			$wpdb->prepare(
-				"SELECT AVG(daily.value) AS avg_value, COUNT(*) AS days FROM (
+				'SELECT AVG(daily.value) AS avg_value, COUNT(*) AS days FROM (
 					SELECT DATE(recorded_at) AS day, MIN(p75_value) AS value
-					FROM {$this->table()}
+					FROM %i
 					WHERE url_hash = %s AND metric = %s AND sample_source = %s AND recorded_at >= %s AND recorded_at < %s
 					GROUP BY DATE(recorded_at)
-				) AS daily", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				) AS daily',
+				$this->table(),
 				Util::url_hash( $url ),
 				$metric,
 				$source,
@@ -196,21 +212,30 @@ final class SampleRepository {
 	public function series( string $url, string $metric, int $days ): array {
 		global $wpdb;
 		$priority = $this->priority_sql();
-		$rows     = $wpdb->get_results(
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- $priority is a fixed run of placeholders from priority_sql(); the source values are bound through the argument list below.
+		$rows = $wpdb->get_results(
 			$wpdb->prepare(
 				"SELECT DATE(recorded_at) AS day,
 					SUBSTRING_INDEX( GROUP_CONCAT( p75_value ORDER BY {$priority}, id DESC ), ',', 1 ) AS value,
 					SUBSTRING_INDEX( GROUP_CONCAT( sample_source ORDER BY {$priority}, id DESC ), ',', 1 ) AS source
-				FROM {$this->table()}
+				FROM %i
 				WHERE url_hash = %s AND metric = %s AND recorded_at >= %s
 				GROUP BY DATE(recorded_at)
-				ORDER BY day ASC", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-				Util::url_hash( $url ),
-				$metric,
-				Util::days_ago( $days ) . ' 00:00:00'
+				ORDER BY day ASC",
+				array_merge(
+					self::SOURCE_PRIORITY,
+					self::SOURCE_PRIORITY,
+					array(
+						$this->table(),
+						Util::url_hash( $url ),
+						$metric,
+						Util::days_ago( $days ) . ' 00:00:00',
+					)
+				)
 			),
 			ARRAY_A
 		);
+		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
 		return array_map(
 			static fn( $row ) => array(
 				'day'    => (string) $row['day'],
@@ -232,7 +257,8 @@ final class SampleRepository {
 		$end   = gmdate( 'Y-m-01 00:00:00', strtotime( $start . ' +1 month' ) );
 		$rows  = $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT metric, AVG(p75_value) AS avg_value FROM {$this->table()} WHERE url_hash = %s AND recorded_at >= %s AND recorded_at < %s GROUP BY metric", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				'SELECT metric, AVG(p75_value) AS avg_value FROM %i WHERE url_hash = %s AND recorded_at >= %s AND recorded_at < %s GROUP BY metric',
+				$this->table(),
 				Util::url_hash( $url ),
 				$start,
 				$end
@@ -250,7 +276,8 @@ final class SampleRepository {
 		global $wpdb;
 		$wpdb->query(
 			$wpdb->prepare(
-				"DELETE FROM {$this->table()} WHERE recorded_at < %s", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				'DELETE FROM %i WHERE recorded_at < %s',
+				$this->table(),
 				Util::days_ago( $days ) . ' 00:00:00'
 			)
 		);
