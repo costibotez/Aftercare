@@ -51,6 +51,14 @@ while IFS= read -r pattern; do
 	fi
 done < "$ROOT/.distignore"
 
+# A declared Domain Path must survive the exclusions above, or the directory
+# reports a header pointing at a folder that is not in the package.
+DOMAIN_PATH="$( grep -m1 -oP '^\s*\*\s*Domain Path:\s*\K\S+' "$DEST/$SLUG.php" || true )"
+if [ -n "$DOMAIN_PATH" ] && [ ! -d "$DEST/${DOMAIN_PATH#/}" ]; then
+	echo "Domain Path header says '$DOMAIN_PATH' but that folder is not in the build" >&2
+	exit 1
+fi
+
 mkdir -p "$OUT_DIR"
 ZIP="$OUT_DIR/$SLUG.$VERSION.zip"
 rm -f "$ZIP"
