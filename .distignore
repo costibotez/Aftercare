@@ -31,3 +31,6 @@ node_modules
 phpcs.xml
 phpcs.xml.dist
 *.zip
+bin
+dist
+vendor
