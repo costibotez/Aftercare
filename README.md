@@ -17,7 +17,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/WordPress-6.4%2B-21759b?logo=wordpress&logoColor=white" alt="WordPress 6.4+" />
   <img src="https://img.shields.io/badge/PHP-8.1%2B-777bb4?logo=php&logoColor=white" alt="PHP 8.1+" />
-  <img src="https://img.shields.io/badge/Version-1.0.1-d97706" alt="Version 1.0.1" />
+  <img src="https://img.shields.io/badge/Version-1.0.3-d97706" alt="Version 1.0.3" />
   <img src="https://img.shields.io/badge/License-GPL--2.0--or--later-0f766e" alt="License GPL-2.0-or-later" />
 </p>
 
@@ -113,7 +113,7 @@ The free plugin tells you *that* something regressed and *what changed*. [Afterc
 ## Development
 
 - WordPress 6.4+, PHP 8.1+. Vanilla PHP with a light PSR-4 structure under the `Aftercare\` namespace — no build step, no framework.
-- **Distribution model:** this repository contains the full (premium) codebase. The WordPress.org free build is produced with `wp dist-archive .`, which excludes the premium-only files listed in `.distignore` (attribution engine, report builder, Slack/webhook notifiers) — directory guidelines forbid shipping locked functionality inside the free plugin. The free code degrades gracefully via `class_exists()` guards, so both builds run from the same source.
+- **Distribution model:** this repository contains the full (premium) codebase. The WordPress.org free build is produced with `bash bin/build-zip.sh`, which excludes the premium-only files listed in `.distignore` (attribution engine, report builder, Slack/webhook notifiers) — directory guidelines forbid shipping locked functionality inside the free plugin. The free code degrades gracefully via `class_exists()` guards, so both builds run from the same source.
 - Cron uses Action Scheduler when available (e.g. WooCommerce installs), WP-Cron otherwise, with a health warning when WP-Cron looks unreliable.
 
 ```
@@ -144,6 +144,31 @@ Useful hooks:
 | `aftercare_pdf_engine` | filter | Plug in a PDF engine (e.g. dompdf) for reports |
 
 QA shortcut: **Dashboard → Run daily checks now** runs the full daily pipeline (CrUX pull → RUM aggregation → breach detection → retention) on demand. Lower a budget below the current value and run it to force an incident and the alert email.
+
+## Releasing to WordPress.org
+
+The GitHub workflow validates the free build on pull requests and pushes to `main`. Pushing a plain version tag such as `1.0.3` publishes that package to SVN `trunk/` and `tags/1.0.3/`, and the PNGs in `.wordpress-org/` to SVN `assets/`. It uses the same ZIP build as local releases; premium code, licensing, translations and repository tooling are excluded. Screenshot HTML sources stay in GitHub.
+
+One-time setup:
+
+1. Generate a dedicated [WordPress.org SVN password](https://profiles.wordpress.org/me/profile/edit/group/3/?screen=svn-password).
+2. In [repository Actions secrets](https://github.com/costibotez/Aftercare/settings/secrets/actions), add `SVN_USERNAME` with value `costibotez` and `SVN_PASSWORD` with that password. Do not put the password in source files or chat.
+3. Merge this workflow into `main` before tagging the first release.
+
+For each release, update the plugin header and `AFTERCARE_VERSION` in `aftercare.php`, the stable tag and changelog in `readme.txt`, and the version badge above. Then build and smoke-test the ZIP on WordPress:
+
+```bash
+bash bin/build-zip.sh
+```
+
+After committing and pushing the release changes to `main`, publish (substitute the new version for later releases):
+
+```bash
+git tag -a 1.0.3 -m "Release 1.0.3"
+git push origin 1.0.3
+```
+
+Watch the **WordPress.org release** workflow in GitHub Actions. The tag must match the plugin header and stable tag; use `1.0.3`, without a `v` prefix. Pushing the tag is the publication step. Published versions are immutable: use a new version for code changes. Readme and directory image changes are included with the next release.
 
 ## License
 

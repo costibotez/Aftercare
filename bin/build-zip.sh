@@ -15,15 +15,21 @@ ROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
 SLUG="aftercare"
 OUT_DIR="${1:-$ROOT/dist}"
 
-VERSION="$( grep -m1 -oP '^\s*\*\s*Version:\s*\K[0-9A-Za-z.\-]+' "$ROOT/$SLUG.php" || true )"
+VERSION="$( sed -nE 's/^[[:space:]]*\*[[:space:]]*Version:[[:space:]]*([0-9A-Za-z.-]+).*/\1/p' "$ROOT/$SLUG.php" || true )"
 if [ -z "$VERSION" ]; then
 	echo "Could not read the version from $SLUG.php" >&2
 	exit 1
 fi
 
-README_TAG="$( grep -m1 -oP '^Stable tag:\s*\K[0-9A-Za-z.\-]+' "$ROOT/readme.txt" || true )"
+README_TAG="$( sed -nE 's/^Stable tag:[[:space:]]*([0-9A-Za-z.-]+).*/\1/p' "$ROOT/readme.txt" || true )"
 if [ "$VERSION" != "$README_TAG" ]; then
 	echo "Version mismatch: $SLUG.php says '$VERSION', readme.txt stable tag says '$README_TAG'" >&2
+	exit 1
+fi
+
+RUNTIME_VERSION="$( sed -nE "s/^define\( 'AFTERCARE_VERSION', '([^']+)' \);/\1/p" "$ROOT/$SLUG.php" )"
+if [ "$VERSION" != "$RUNTIME_VERSION" ]; then
+	echo "Version mismatch: plugin header says '$VERSION', AFTERCARE_VERSION says '$RUNTIME_VERSION'" >&2
 	exit 1
 fi
 
@@ -53,7 +59,7 @@ done < "$ROOT/.distignore"
 
 # A declared Domain Path must survive the exclusions above, or the directory
 # reports a header pointing at a folder that is not in the package.
-DOMAIN_PATH="$( grep -m1 -oP '^\s*\*\s*Domain Path:\s*\K\S+' "$DEST/$SLUG.php" || true )"
+DOMAIN_PATH="$( sed -nE 's/^[[:space:]]*\*[[:space:]]*Domain Path:[[:space:]]*([^[:space:]]+).*/\1/p' "$DEST/$SLUG.php" || true )"
 if [ -n "$DOMAIN_PATH" ] && [ ! -d "$DEST/${DOMAIN_PATH#/}" ]; then
 	echo "Domain Path header says '$DOMAIN_PATH' but that folder is not in the build" >&2
 	exit 1

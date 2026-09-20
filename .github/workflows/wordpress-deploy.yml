@@ -1,0 +1,54 @@
+name: WordPress.org release
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    tags: ['[0-9]*.[0-9]*.[0-9]*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wordpress-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Build and validate the free plugin
+        env:
+          RELEASE_TAG: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
+        run: |
+          bash bin/build-zip.sh
+          if [[ -n "$RELEASE_TAG" ]]; then
+            [[ "$RELEASE_TAG" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Use a plain version tag, e.g. 1.0.3"; exit 1; }
+            test -f "dist/aftercare.$RELEASE_TAG.zip" || { echo "Tag must match plugin version and Stable tag"; exit 1; }
+          fi
+          mkdir -p "$RUNNER_TEMP/aftercare-package" "dist/wordpress-assets"
+          unzip -q dist/aftercare.*.zip -d "$RUNNER_TEMP/aftercare-package"
+          find "$RUNNER_TEMP/aftercare-package/aftercare" -name '*.php' -print0 | xargs -0 -n1 php -l
+          cp .wordpress-org/*.png "dist/wordpress-assets/"
+
+      - name: Check SVN credentials
+        if: github.ref_type == 'tag'
+        env:
+          SVN_USERNAME: ${{ secrets.SVN_USERNAME }}
+          SVN_PASSWORD: ${{ secrets.SVN_PASSWORD }}
+        run: |
+          test -n "$SVN_USERNAME" && test -n "$SVN_PASSWORD" || { echo "Configure SVN_USERNAME and SVN_PASSWORD in repository Actions secrets"; exit 1; }
+
+      - name: Deploy release to WordPress.org
+        if: github.ref_type == 'tag'
+        uses: 10up/action-wordpress-plugin-deploy@54bd289b8525fd23a5c365ec369185f2966529c2 # 2.3.0
+        env:
+          SVN_USERNAME: ${{ secrets.SVN_USERNAME }}
+          SVN_PASSWORD: ${{ secrets.SVN_PASSWORD }}
+          SLUG: aftercare
+          BUILD_DIR: ${{ runner.temp }}/aftercare-package/aftercare
+          ASSETS_DIR: dist/wordpress-assets
