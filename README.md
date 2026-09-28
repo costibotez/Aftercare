@@ -86,6 +86,8 @@ Every site on a care plan eventually produces the same two conversations: *"the 
 3. Paste it in **Aftercare → Settings**, optionally add tracked URLs and enable RUM.
 4. Press **Run daily checks now** on the dashboard — first vitals data appears immediately.
 
+> **Looking after client sites on care plans?** Get the [free monthly care plan report template](https://www.nomad-developer.co.uk/free-care-plan-report-template?utm_source=github&utm_medium=readme&utm_campaign=aftercare): a rebrandable Word document for turning a month of Aftercare data into a report clients read.
+
 ## Aftercare Pro
 
 The free plugin tells you *that* something regressed and *what changed*. [Aftercare Pro](https://github.com/costibotez/aftercare#pro) tells you **which change probably did it** — and turns the month into client-ready proof:

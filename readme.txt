@@ -87,6 +87,10 @@ No. Tracked URLs are unlimited, vitals are kept for thirteen months and the ledg
 
 By default all Aftercare tables and options are removed on uninstall. Tick "Keep Aftercare data" in Settings to preserve them.
 
+= I look after client sites on care plans. How do I show clients the work? =
+
+Aftercare records the evidence: vitals, incidents and every change. To turn a month of it into something a client reads, there is a free monthly care plan report template (a Word document you rebrand once) at [nomad-developer.co.uk/free-care-plan-report-template](https://www.nomad-developer.co.uk/free-care-plan-report-template?utm_source=wordpress-org&utm_medium=readme&utm_campaign=aftercare). It is optional and not needed to use the plugin.
+
 = Can I run the checks from a server cron instead of WP-Cron? =
 
 Yes. `wp aftercare run` executes the full daily pipeline (CrUX pull, RUM aggregation, breach detection, retention). Aftercare also uses Action Scheduler automatically when another plugin (such as WooCommerce) provides it.

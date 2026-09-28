@@ -99,6 +99,17 @@ final class DashboardPage {
 
 		echo '</div>';
 
+		// One static line on the plugin's own screen: no notice, nothing to dismiss.
+		echo '<p class="aftercare-subtle">';
+		printf(
+			wp_kses_post(
+				/* translators: %s: URL of the free report template. */
+				__( 'Looking after this site for a client? Turn this month into a report they will read with the <a href="%s" target="_blank" rel="noopener noreferrer">free care plan report template</a>.', 'aftercare' )
+			),
+			esc_url( 'https://www.nomad-developer.co.uk/free-care-plan-report-template?utm_source=aftercare-plugin&utm_medium=dashboard&utm_campaign=aftercare' )
+		);
+		echo '</p>';
+
 		Menu::footer();
 	}
 
