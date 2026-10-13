@@ -1,0 +1,109 @@
+name: WordPress compatibility
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    # Weekly, so a new WordPress release is tested without waiting for a push.
+    - cron: '17 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: compat-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  compat:
+    name: WordPress ${{ matrix.wp }} on PHP ${{ matrix.php }}
+    runs-on: ubuntu-latest
+    # Nightly builds are pre-release, so they warn early without blocking.
+    continue-on-error: ${{ matrix.wp == 'nightly' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - wp: minimum
+            php: '8.1'
+          - wp: latest
+            php: '8.1'
+          - wp: latest
+            php: '8.4'
+          - wp: nightly
+            php: '8.4'
+
+    services:
+      mariadb:
+        image: mariadb:10.11
+        env:
+          MARIADB_ROOT_PASSWORD: root
+          MARIADB_DATABASE: wordpress
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mariadb-admin ping -h 127.0.0.1 -proot"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: mysqli, zip
+          coverage: none
+          tools: none
+
+      - name: Download WordPress
+        env:
+          WP: ${{ matrix.wp }}
+        run: |
+          case "$WP" in
+            latest)  URL=https://wordpress.org/latest.tar.gz ;;
+            nightly) URL=https://wordpress.org/nightly-builds/wordpress-latest.zip ;;
+            minimum)
+              MIN="$( sed -nE 's/^Requires at least:[[:space:]]*([0-9.]+).*/\1/p' readme.txt )"
+              URL="https://wordpress.org/wordpress-$MIN.tar.gz" ;;
+          esac
+          mkdir -p "$RUNNER_TEMP/wp"
+          curl -fsSL "$URL" -o "$RUNNER_TEMP/wp-download"
+          if [[ "$URL" == *.zip ]]; then
+            unzip -q "$RUNNER_TEMP/wp-download" -d "$RUNNER_TEMP/wp"
+          else
+            tar -xzf "$RUNNER_TEMP/wp-download" -C "$RUNNER_TEMP/wp"
+          fi
+
+      - name: Build the WordPress.org zip
+        run: bash bin/build-zip.sh
+
+      - name: Run compatibility checks
+        env:
+          DB_NAME: wordpress
+          DB_USER: root
+          DB_PASSWORD: root
+          DB_HOST: 127.0.0.1
+        run: bash bin/compat-test.sh "$RUNNER_TEMP/wp/wordpress" dist/aftercare.*.zip
+
+      - name: Check the Tested up to header
+        if: matrix.wp == 'latest' && matrix.php == '8.4'
+        env:
+          SCHEDULED: ${{ github.event_name == 'schedule' }}
+        run: |
+          LATEST="$( curl -fsSL https://api.wordpress.org/core/version-check/1.7/ | php -r '$d = json_decode( stream_get_contents( STDIN ), true ); echo implode( ".", array_slice( explode( ".", $d["offers"][0]["current"] ), 0, 2 ) );' )"
+          TESTED="$( sed -nE 's/^Tested up to:[[:space:]]*([0-9.]+).*/\1/p' readme.txt )"
+          echo "Latest WordPress: $LATEST. readme.txt Tested up to: $TESTED."
+          if [ "$( printf '%s\n%s\n' "$TESTED" "$LATEST" | sort -V | tail -1 )" != "$TESTED" ]; then
+            MSG="WordPress $LATEST passed these checks. Update Tested up to in readme.txt from $TESTED to $LATEST."
+            if [ "$SCHEDULED" = true ]; then
+              echo "::error::$MSG"
+              exit 1
+            fi
+            echo "::warning::$MSG"
+          fi
