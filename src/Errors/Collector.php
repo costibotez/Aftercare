@@ -104,6 +104,8 @@ final class Collector {
 				)
 			);
 
+			( new Incidents() )->on_error( $signature );
+
 			/**
 			 * Fires when a fatal error signature is first seen, or seen again
 			 * after a day of silence.

@@ -64,6 +64,38 @@ final class Repository {
 	}
 
 	/**
+	 * Display name of a culprit: "Plugin: WooCommerce", "Theme: Astra",
+	 * "WordPress core". Falls back to the slug when the name is unknown.
+	 */
+	public static function culprit_label( string $culprit ): string {
+		[ $kind, $slug ] = array_pad( explode( ':', $culprit, 2 ), 2, '' );
+		switch ( $kind ) {
+			case 'plugin':
+				$name = $slug;
+				if ( function_exists( 'get_plugins' ) ) {
+					foreach ( get_plugins() as $file => $data ) {
+						if ( str_starts_with( $file, $slug . '/' ) || $file === $slug ) {
+							$name = (string) ( $data['Name'] ?? $slug );
+							break;
+						}
+					}
+				}
+				/* translators: %s: plugin name */
+				return sprintf( __( 'Plugin: %s', 'aftercare' ), $name );
+			case 'mu-plugin':
+				/* translators: %s: must-use plugin file */
+				return sprintf( __( 'Must-use plugin: %s', 'aftercare' ), $slug );
+			case 'theme':
+				$theme = function_exists( 'wp_get_theme' ) ? wp_get_theme( $slug ) : null;
+				/* translators: %s: theme name */
+				return sprintf( __( 'Theme: %s', 'aftercare' ), $theme && $theme->exists() ? $theme->get( 'Name' ) : $slug );
+			case 'core':
+				return __( 'WordPress core', 'aftercare' );
+		}
+		return __( 'Unknown', 'aftercare' );
+	}
+
+	/**
 	 * Human-readable place of an error: "plugins/acme/acme.php:12".
 	 */
 	public static function location( string $file, int $line ): string {
@@ -77,6 +109,31 @@ final class Repository {
 		global $wpdb;
 		$row = $wpdb->get_row(
 			$wpdb->prepare( 'SELECT * FROM %i WHERE signature = %s', $this->table(), $signature ),
+			ARRAY_A
+		);
+		return $row ?: null;
+	}
+
+	/**
+	 * Latest time any error at this location was seen, or null.
+	 */
+	public function last_seen_at( string $location ): ?string {
+		global $wpdb;
+		$value = $wpdb->get_var(
+			$wpdb->prepare( 'SELECT MAX(last_seen) FROM %i WHERE location = %s', $this->table(), $location )
+		);
+		return $value ? (string) $value : null;
+	}
+
+	/**
+	 * Most recently seen error at a location, or null.
+	 *
+	 * @return array<string, mixed>|null
+	 */
+	public function find_by_location( string $location ): ?array {
+		global $wpdb;
+		$row = $wpdb->get_row(
+			$wpdb->prepare( 'SELECT * FROM %i WHERE location = %s ORDER BY last_seen DESC LIMIT 1', $this->table(), $location ),
 			ARRAY_A
 		);
 		return $row ?: null;

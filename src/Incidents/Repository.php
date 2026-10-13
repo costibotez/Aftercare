@@ -24,6 +24,22 @@ final class Repository {
 	 */
 	public const SOURCE_LAB = 'lab';
 
+	/** Incident raised by a PHP fatal error; its URL column holds the error's file and line. */
+	public const SOURCE_ERROR = 'error';
+
+	/** Incident raised by a tracked URL failing the availability check. */
+	public const SOURCE_AVAILABILITY = 'availability';
+
+	/** Sources whose incidents are about Core Web Vitals. */
+	public const VITALS_SOURCES = array( self::SOURCE_FIELD, self::SOURCE_LAB );
+
+	/**
+	 * @param array<string, mixed> $incident
+	 */
+	public static function is_vitals( array $incident ): bool {
+		return in_array( (string) ( $incident['sample_source'] ?? self::SOURCE_FIELD ), self::VITALS_SOURCES, true );
+	}
+
 	/**
 	 * Ledger ids of the changes a lab check was re-testing when it caught the
 	 * incident. Empty for field incidents and daily lab checks.
@@ -43,7 +59,14 @@ final class Repository {
 	 */
 	public static function label( array $incident ): string {
 		$metric = (string) ( $incident['metric'] ?? '' );
-		if ( self::SOURCE_LAB === ( $incident['sample_source'] ?? '' ) ) {
+		$source = (string) ( $incident['sample_source'] ?? '' );
+		if ( self::SOURCE_ERROR === $source ) {
+			return __( 'PHP fatal error', 'aftercare' );
+		}
+		if ( self::SOURCE_AVAILABILITY === $source ) {
+			return __( 'Page unavailable', 'aftercare' );
+		}
+		if ( self::SOURCE_LAB === $source ) {
 			/* translators: %s: metric name such as LCP */
 			return sprintf( __( '%s (lab)', 'aftercare' ), $metric );
 		}
@@ -162,9 +185,43 @@ final class Repository {
 		return $rows ?: array();
 	}
 
-	public function count_open(): int {
+	/**
+	 * Open or acknowledged incidents, optionally only from some sources.
+	 *
+	 * @param string[]|null $sources
+	 */
+	public function count_open( ?array $sources = null ): int {
 		global $wpdb;
-		return (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$this->table()} WHERE status IN ('open','acknowledged')" ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table name is built from $wpdb->prefix, no user input.
+		if ( null === $sources ) {
+			return (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$this->table()} WHERE status IN ('open','acknowledged')" ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table name is built from $wpdb->prefix, no user input.
+		}
+		$total = 0;
+		foreach ( $sources as $source ) {
+			$total += (int) $wpdb->get_var(
+				$wpdb->prepare(
+					"SELECT COUNT(*) FROM {$this->table()} WHERE sample_source = %s AND status IN ('open','acknowledged')", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+					$source
+				)
+			);
+		}
+		return $total;
+	}
+
+	/**
+	 * Open or acknowledged incidents from one source.
+	 *
+	 * @return array<int, array<string, mixed>>
+	 */
+	public function open_for_source( string $source ): array {
+		global $wpdb;
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT * FROM {$this->table()} WHERE sample_source = %s AND status IN ('open','acknowledged') ORDER BY opened_at ASC", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				$source
+			),
+			ARRAY_A
+		);
+		return $rows ?: array();
 	}
 
 	/**

@@ -91,6 +91,7 @@ switch ( $step ) {
 		$hooks = aftercare_cron_hooks();
 		check( in_array( 'aftercare_daily_tasks', $hooks, true ), 'daily cron scheduled' );
 		check( in_array( 'aftercare_weekly_digest', $hooks, true ), 'weekly digest cron scheduled' );
+		check( in_array( 'aftercare_hourly_tasks', $hooks, true ), 'hourly cron scheduled' );
 		break;
 
 	case 'flow':
@@ -273,12 +274,27 @@ switch ( $step ) {
 		$rows = $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM %i ORDER BY id', $wpdb->prefix . 'aftercare_errors' ), ARRAY_A );
 		check( 1 === count( $rows ), 'fatal errors grouped under one signature' );
 		$row = $rows[0] ?? array();
-		check( 3 === (int) ( $row['occurrences'] ?? 0 ), 'early and late fatal errors both counted' );
+		check( 4 === (int) ( $row['occurrences'] ?? 0 ), 'fatal errors counted while booting, before output and after output' );
 		check( str_starts_with( (string) ( $row['file'] ?? '' ), 'wp-includes/' ), 'error file stored relative to the WordPress root' );
 		check( 'mu-plugin:compat-fatal.php' === ( $row['culprit'] ?? '' ), 'culprit found in the stack trace of a core error' );
 		check( ! str_contains( (string) ( $row['message'] ?? '' ), ABSPATH ) && ! str_contains( (string) ( $row['message'] ?? '' ), 'Stack trace' ), 'error message stripped of paths and stack trace' );
 		$entries = Aftercare\Core\Plugin::instance()->ledger()->query( array( 'type' => 'php_error' ), 10 );
 		check( 1 === count( $entries ), 'one ledger entry for a repeating fatal error' );
+
+		$incidents = Aftercare\Core\Plugin::instance()->incidents();
+		$location  = (string) $row['location'];
+		$incident  = $incidents->find_open( $location, 'ERROR', 'error' );
+		check( null !== $incident, 'fatal error opens an error incident' );
+		check( 1 === count( $incidents->open_for_source( 'error' ) ), 'a repeating fatal error opens one incident' );
+		$subjects = (array) get_option( 'compat_mail_log', array() );
+		check( 1 === count( preg_grep( '/PHP fatal error/', $subjects ) ), 'alert email sent from a request that died before plugins_loaded' );
+
+		( new Aftercare\Core\Cron() )->run_hourly();
+		check( null !== $incidents->find_open( $location, 'ERROR', 'error' ), 'error incident stays open while the error is recent' );
+		$wpdb->query( $wpdb->prepare( 'UPDATE %i SET last_seen = %s', $wpdb->prefix . 'aftercare_errors', gmdate( 'Y-m-d H:i:s', time() - 2 * DAY_IN_SECONDS ) ) );
+		( new Aftercare\Core\Cron() )->run_hourly();
+		check( null === $incidents->find_open( $location, 'ERROR', 'error' ), 'error incident resolves after a quiet day' );
+		delete_option( 'compat_mail_log' );
 		break;
 
 	case 'teardown':

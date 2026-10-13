@@ -39,6 +39,8 @@ final class Plugin {
 		return self::$instance;
 	}
 
+	private bool $notifiers_registered = false;
+
 	private function __construct() {}
 
 	/**
@@ -62,14 +64,8 @@ final class Plugin {
 		( new LabClient( new SampleRepository() ) )->register();
 		( new LabScheduler() )->register();
 
-		// Notifications subscribe to incident lifecycle actions.
-		( new Emailer() )->register();
+		$this->register_notifiers();
 		( new WeeklyDigest() )->register();
-		// The Slack and webhook notifiers live in the separate add-on plugin.
-		if ( class_exists( Slack::class ) && class_exists( Webhook::class ) ) {
-			( new Slack() )->register();
-			( new Webhook() )->register();
-		}
 
 		// Admin bar shows on the front end too for logged-in administrators.
 		( new AdminBar() )->register();
@@ -83,6 +79,25 @@ final class Plugin {
 		}
 
 		CliCommands::register();
+	}
+
+	/**
+	 * Notifications subscribe to incident lifecycle actions. Safe to call
+	 * more than once: a fatal error while plugins load opens its incident
+	 * before boot() has run, and registers the notifiers itself.
+	 */
+	public function register_notifiers(): void {
+		if ( $this->notifiers_registered ) {
+			return;
+		}
+		$this->notifiers_registered = true;
+
+		( new Emailer() )->register();
+		// The Slack and webhook notifiers live in the separate add-on plugin.
+		if ( class_exists( Slack::class ) && class_exists( Webhook::class ) ) {
+			( new Slack() )->register();
+			( new Webhook() )->register();
+		}
 	}
 
 	public function incidents(): IncidentRepository {

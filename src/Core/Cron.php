@@ -26,10 +26,12 @@ final class Cron {
 
 	public const DAILY_HOOK   = 'aftercare_daily_tasks';
 	public const WEEKLY_HOOK  = 'aftercare_weekly_digest';
+	public const HOURLY_HOOK  = 'aftercare_hourly_tasks';
 	public const LAST_RUN_OPT = 'aftercare_cron_last_run';
 
 	public function register(): void {
 		add_action( self::DAILY_HOOK, array( $this, 'run_daily' ) );
+		add_action( self::HOURLY_HOOK, array( $this, 'run_hourly' ) );
 		add_action( 'admin_notices', array( $this, 'maybe_warn_cron_health' ) );
 
 		// Self-heal: if the recurring event vanished (e.g. after a cron reset), re-add it.
@@ -42,6 +44,7 @@ final class Cron {
 		$hooks = array(
 			self::DAILY_HOOK  => array( DAY_IN_SECONDS, 'daily' ),
 			self::WEEKLY_HOOK => array( WEEK_IN_SECONDS, 'weekly' ),
+			self::HOURLY_HOOK => array( HOUR_IN_SECONDS, 'hourly' ),
 		);
 		foreach ( $hooks as $hook => [ $interval, $recurrence ] ) {
 			if ( self::uses_action_scheduler() ) {
@@ -55,7 +58,7 @@ final class Cron {
 	}
 
 	public static function unschedule(): void {
-		foreach ( array( self::DAILY_HOOK, self::WEEKLY_HOOK ) as $hook ) {
+		foreach ( array( self::DAILY_HOOK, self::WEEKLY_HOOK, self::HOURLY_HOOK ) as $hook ) {
 			if ( self::uses_action_scheduler() ) {
 				as_unschedule_all_actions( $hook, array(), 'aftercare' );
 			}
@@ -93,7 +96,7 @@ final class Cron {
 	}
 
 	private static function is_scheduled(): bool {
-		foreach ( array( self::DAILY_HOOK, self::WEEKLY_HOOK ) as $hook ) {
+		foreach ( array( self::DAILY_HOOK, self::WEEKLY_HOOK, self::HOURLY_HOOK ) as $hook ) {
 			$next = self::uses_action_scheduler() ? false !== as_next_scheduled_action( $hook ) : (bool) wp_next_scheduled( $hook );
 			if ( ! $next ) {
 				return false;
@@ -147,6 +150,13 @@ final class Cron {
 			$prev_year  = (int) gmdate( 'Y', strtotime( 'first day of last month' ) );
 			( new ReportBuilder() )->generate_draft( $prev_month, $prev_year );
 		}
+	}
+
+	/**
+	 * Hourly: resolve error incidents whose error has gone quiet.
+	 */
+	public function run_hourly(): void {
+		( new \Aftercare\Errors\Incidents() )->resolve_quiet();
 	}
 
 	/**

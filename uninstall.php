@@ -38,5 +38,6 @@ $wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE '\\_transient
 
 wp_clear_scheduled_hook( 'aftercare_daily_tasks' );
 wp_clear_scheduled_hook( 'aftercare_weekly_digest' );
+wp_clear_scheduled_hook( 'aftercare_hourly_tasks' );
 wp_unschedule_hook( 'aftercare_lab_url' );
 wp_unschedule_hook( 'aftercare_lab_change_check' );

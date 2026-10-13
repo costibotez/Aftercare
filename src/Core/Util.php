@@ -37,6 +37,12 @@ final class Util {
 	 */
 	public static function format_metric( string $metric, float $value ): string {
 		switch ( $metric ) {
+			case 'ERROR':
+				/* translators: %s: number of occurrences */
+				return sprintf( _n( '%s time', '%s times', (int) $value, 'aftercare' ), number_format_i18n( $value ) );
+			case 'HTTP':
+				/* translators: %d: HTTP status code */
+				return $value > 0 ? sprintf( __( 'HTTP %d', 'aftercare' ), (int) $value ) : __( 'no response', 'aftercare' );
 			case 'CLS':
 				return number_format_i18n( $value, 3 );
 			case 'LCP':

@@ -3,6 +3,7 @@ namespace Aftercare\Admin;
 
 use Aftercare\Core\Util;
 use Aftercare\Incidents\Repository as IncidentRepository;
+use Aftercare\Errors\Repository as ErrorRepository;
 use Aftercare\Incidents\Attribution;
 use Aftercare\Ledger\Repository as LedgerRepository;
 use Aftercare\Vitals\SampleRepository;
@@ -53,7 +54,7 @@ final class IncidentsPage {
 			echo '<td><strong>' . esc_html( IncidentRepository::label( $incident ) ) . '</strong></td>';
 			echo '<td class="aftercare-cell-url">' . esc_html( (string) $incident['url'] ) . '</td>';
 			echo '<td class="aftercare-fail">' . esc_html( Util::format_metric( $metric, (float) $incident['breach_p75'] ) ) . '</td>';
-			echo '<td>' . esc_html( Util::format_metric( $metric, (float) $incident['budget_value'] ) ) . '</td>';
+			echo '<td>' . ( IncidentRepository::is_vitals( $incident ) ? esc_html( Util::format_metric( $metric, (float) $incident['budget_value'] ) ) : '&mdash;' ) . '</td>';
 			echo '<td>' . ( null !== $incident['baseline_p75'] ? esc_html( Util::format_metric( $metric, (float) $incident['baseline_p75'] ) ) : '&mdash;' ) . '</td>';
 			echo '<td>' . self::status_pill( (string) $incident['status'] ) . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped in helper.
 			echo '<td>' . esc_html( human_time_diff( strtotime( $incident['opened_at'] . ' UTC' ) ) . ' ' . __( 'ago', 'aftercare' ) ) . '</td>';
@@ -86,15 +87,19 @@ final class IncidentsPage {
 		echo '<div class="aftercare-panel">';
 		echo '<h2>' . esc_html( IncidentRepository::label( $incident ) ) . ' — ' . esc_html( $url ) . ' ' . self::status_pill( (string) $incident['status'] ) . '</h2>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 
-		echo '<div class="aftercare-incident-stats">';
-		echo '<div><span class="aftercare-stat-label">' . ( $is_lab ? esc_html__( 'Lab reading', 'aftercare' ) : esc_html__( 'Breach p75', 'aftercare' ) ) . '</span><span class="aftercare-stat aftercare-fail">' . esc_html( Util::format_metric( $metric, (float) $incident['breach_p75'] ) ) . '</span></div>';
-		echo '<div><span class="aftercare-stat-label">' . esc_html__( 'Budget', 'aftercare' ) . '</span><span class="aftercare-stat">' . esc_html( Util::format_metric( $metric, (float) $incident['budget_value'] ) ) . '</span></div>';
-		echo '<div><span class="aftercare-stat-label">' . esc_html__( '28-day baseline', 'aftercare' ) . '</span><span class="aftercare-stat">' . ( null !== $incident['baseline_p75'] ? esc_html( Util::format_metric( $metric, (float) $incident['baseline_p75'] ) ) : '&mdash;' ) . '</span></div>';
-		echo '<div><span class="aftercare-stat-label">' . esc_html__( 'Opened', 'aftercare' ) . '</span><span class="aftercare-stat">' . esc_html( (string) $incident['opened_at'] ) . ' UTC</span></div>';
-		echo '</div>';
+		if ( ! IncidentRepository::is_vitals( $incident ) ) {
+			$this->render_problem_stats( $incident );
+		} else {
+			echo '<div class="aftercare-incident-stats">';
+			echo '<div><span class="aftercare-stat-label">' . ( $is_lab ? esc_html__( 'Lab reading', 'aftercare' ) : esc_html__( 'Breach p75', 'aftercare' ) ) . '</span><span class="aftercare-stat aftercare-fail">' . esc_html( Util::format_metric( $metric, (float) $incident['breach_p75'] ) ) . '</span></div>';
+			echo '<div><span class="aftercare-stat-label">' . esc_html__( 'Budget', 'aftercare' ) . '</span><span class="aftercare-stat">' . esc_html( Util::format_metric( $metric, (float) $incident['budget_value'] ) ) . '</span></div>';
+			echo '<div><span class="aftercare-stat-label">' . esc_html__( '28-day baseline', 'aftercare' ) . '</span><span class="aftercare-stat">' . ( null !== $incident['baseline_p75'] ? esc_html( Util::format_metric( $metric, (float) $incident['baseline_p75'] ) ) : '&mdash;' ) . '</span></div>';
+			echo '<div><span class="aftercare-stat-label">' . esc_html__( 'Opened', 'aftercare' ) . '</span><span class="aftercare-stat">' . esc_html( (string) $incident['opened_at'] ) . ' UTC</span></div>';
+			echo '</div>';
 
-		if ( $is_lab ) {
-			echo '<p class="aftercare-subtle">' . esc_html__( 'Opened by a Lighthouse lab check: the reading was more than 20% worse than the 28-day lab baseline, by more than normal run-to-run variation. Lab incidents never open from the budget alone.', 'aftercare' ) . '</p>';
+			if ( $is_lab ) {
+				echo '<p class="aftercare-subtle">' . esc_html__( 'Opened by a Lighthouse lab check: the reading was more than 20% worse than the 28-day lab baseline, by more than normal run-to-run variation. Lab incidents never open from the budget alone.', 'aftercare' ) . '</p>';
+			}
 		}
 
 		$triggers = ( new LedgerRepository() )->find_many( IncidentRepository::trigger_ids( $incident ) );
@@ -107,11 +112,13 @@ final class IncidentsPage {
 			echo '</ul>';
 		}
 
-		// 60-day trend with the breach visible, drawn from the same kind of
-		// data that opened the incident.
-		$samples = new SampleRepository();
-		$series  = $is_lab ? $samples->lab_series( $url, $metric, 60 ) : $samples->series( $url, $metric, 60 );
-		echo '<div class="aftercare-sparkline aftercare-sparkline-large" data-sparkline="' . esc_attr( (string) wp_json_encode( array_column( $series, 'value' ) ) ) . '" data-budget="' . esc_attr( (string) $incident['budget_value'] ) . '"></div>';
+		if ( IncidentRepository::is_vitals( $incident ) ) {
+			// 60-day trend with the breach visible, drawn from the same kind
+			// of data that opened the incident.
+			$samples = new SampleRepository();
+			$series  = $is_lab ? $samples->lab_series( $url, $metric, 60 ) : $samples->series( $url, $metric, 60 );
+			echo '<div class="aftercare-sparkline aftercare-sparkline-large" data-sparkline="' . esc_attr( (string) wp_json_encode( array_column( $series, 'value' ) ) ) . '" data-budget="' . esc_attr( (string) $incident['budget_value'] ) . '"></div>';
+		}
 
 		// Status actions.
 		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" class="aftercare-inline-form">';
@@ -178,6 +185,42 @@ final class IncidentsPage {
 		echo '</div>';
 
 		Menu::footer();
+	}
+
+	/**
+	 * Stats for incidents that are not about vitals: a fatal error, or a page
+	 * that failed the availability check.
+	 *
+	 * @param array<string, mixed> $incident
+	 */
+	private function render_problem_stats( array $incident ): void {
+		$stat = static function ( string $label, string $value, string $class = '' ): void {
+			echo '<div><span class="aftercare-stat-label">' . esc_html( $label ) . '</span><span class="aftercare-stat ' . esc_attr( $class ) . '">' . esc_html( $value ) . '</span></div>';
+		};
+
+		if ( IncidentRepository::SOURCE_ERROR === $incident['sample_source'] ) {
+			$error = ( new ErrorRepository() )->find_by_location( (string) $incident['url'] );
+			if ( $error ) {
+				echo '<p><code>' . esc_html( (string) $error['message'] ) . '</code></p>';
+			}
+			echo '<div class="aftercare-incident-stats">';
+			if ( $error ) {
+				$stat( __( 'Occurrences', 'aftercare' ), Util::format_metric( 'ERROR', (float) $error['occurrences'] ), 'aftercare-fail' );
+				$stat( __( 'Likely source', 'aftercare' ), ErrorRepository::culprit_label( (string) $error['culprit'] ) );
+				$stat( __( 'First seen', 'aftercare' ), (string) $error['first_seen'] . ' UTC' );
+				$stat( __( 'Last seen', 'aftercare' ), (string) $error['last_seen'] . ' UTC' );
+			}
+			$stat( __( 'Opened', 'aftercare' ), (string) $incident['opened_at'] . ' UTC' );
+			echo '</div>';
+			echo '<p class="aftercare-subtle">' . esc_html__( 'Resolves on its own once the error has not happened for 24 hours.', 'aftercare' ) . '</p>';
+			return;
+		}
+
+		echo '<div class="aftercare-incident-stats">';
+		$stat( __( 'Response', 'aftercare' ), Util::format_metric( 'HTTP', (float) $incident['breach_p75'] ), 'aftercare-fail' );
+		$stat( __( 'Opened', 'aftercare' ), (string) $incident['opened_at'] . ' UTC' );
+		echo '</div>';
+		echo '<p class="aftercare-subtle">' . esc_html__( 'The page failed two availability checks in a row: a server error, a missing page or a page cut off before it finished rendering. Resolves on its own at the first healthy check.', 'aftercare' ) . '</p>';
 	}
 
 	public static function status_pill( string $status ): string {

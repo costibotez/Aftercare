@@ -83,15 +83,18 @@ add_filter(
 );
 PHP
 
-# Fatal errors on demand: ?aftercare_fatal=early breaks the request before any
-# output (core shows its critical error page), ?aftercare_fatal=late breaks it
-# after the page started rendering (no error page, only shutdown). Both go
-# through a core function so the culprit has to come from the stack trace.
+# Fatal errors on demand: ?aftercare_fatal=boot breaks the request while
+# plugins load (right after Aftercare, before plugins_loaded), early breaks it
+# before any output (core shows its critical error page), late breaks it after
+# the page started rendering (no error page, only shutdown). All go through a
+# core function so the culprit has to come from the stack trace.
 cat > "$WP_DIR/wp-content/mu-plugins/compat-fatal.php" <<'PHP'
 <?php
 // phpcs:ignoreFile
 $aftercare_fatal = $_GET['aftercare_fatal'] ?? '';
-if ( 'early' === $aftercare_fatal ) {
+if ( 'boot' === $aftercare_fatal ) {
+	add_action( 'plugin_loaded', static function ( $file ) { if ( str_ends_with( $file, '/aftercare.php' ) ) { wp_parse_args(); } } );
+} elseif ( 'early' === $aftercare_fatal ) {
 	add_action( 'init', static function () { wp_parse_args(); } );
 } elseif ( 'late' === $aftercare_fatal ) {
 	add_action( 'wp_footer', static function () { echo 'x'; flush(); wp_parse_args(); } );
@@ -102,7 +105,19 @@ PHP
 mkdir -p "$WP_DIR/wp-content/mu-plugins"
 cat > "$WP_DIR/wp-content/mu-plugins/compat-no-mail.php" <<'PHP'
 <?php
-add_filter( 'pre_wp_mail', '__return_true' );
+// Keep the subjects, so the checks can see mail sent from inside a request
+// that died of a fatal error.
+add_filter(
+	'pre_wp_mail',
+	static function ( $short, $atts ) {
+		$log   = (array) get_option( 'compat_mail_log', array() );
+		$log[] = $atts['subject'];
+		update_option( 'compat_mail_log', $log, false );
+		return true;
+	},
+	10,
+	2
+);
 PHP
 
 rm -rf "$WP_DIR/wp-content/plugins/aftercare"
@@ -210,8 +225,8 @@ curl -s -b "$JAR" -o "$WORK/ledger.csv" "$BASE/wp-admin/$EXPORT"
 head -1 "$WORK/ledger.csv" | grep -q '^occurred_at,event_type,summary' || fail 'ledger CSV export'
 echo 'PASS ledger CSV export'
 
-# Fatal errors: two early ones and one late one, three in all.
-for mode in early early late; do
+# Fatal errors: one while plugins load, two early ones and one late one.
+for mode in boot early early late; do
 	curl -s -o /dev/null "$BASE/?aftercare_fatal=$mode"
 done
 php "$CHECKS" "$WP_DIR" errors

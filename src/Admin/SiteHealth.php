@@ -175,7 +175,7 @@ final class SiteHealth {
 	 * @return array<string, mixed>
 	 */
 	public function test_incidents(): array {
-		$open = ( new IncidentRepository() )->count_open();
+		$open = ( new IncidentRepository() )->count_open( IncidentRepository::VITALS_SOURCES );
 		if ( 0 === $open ) {
 			return $this->result(
 				'aftercare_incidents',

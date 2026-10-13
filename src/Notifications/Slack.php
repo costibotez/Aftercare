@@ -23,6 +23,19 @@ final class Slack {
 	 * @param array<string, mixed>|null $incident
 	 */
 	public function notify_opened( $incident ): void {
+		if ( is_array( $incident ) && ! IncidentRepository::is_vitals( $incident ) ) {
+			$this->post(
+				sprintf(
+					/* translators: 1: site name, 2: "PHP fatal error" or "Page unavailable", 3: file and line, or URL, 4: occurrences or HTTP status */
+					__( ':rotating_light: %1$s: %2$s at %3$s (%4$s)', 'aftercare' ),
+					wp_specialchars_decode( get_bloginfo( 'name' ), ENT_QUOTES ),
+					IncidentRepository::label( $incident ),
+					(string) $incident['url'],
+					Util::format_metric( (string) $incident['metric'], (float) $incident['breach_p75'] )
+				)
+			);
+			return;
+		}
 		if ( is_array( $incident ) ) {
 			$this->post(
 				sprintf(
