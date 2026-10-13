@@ -4,7 +4,7 @@ Tags: core web vitals, performance, monitoring, activity log, client reports
 Requires at least: 6.4
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.0.3
+Stable tag: 1.0.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -133,6 +133,9 @@ Yes. `wp aftercare run` executes the full daily pipeline (CrUX pull, RUM aggrega
 * Pro: cause attribution, white-label client reports, Slack/webhooks, extended retention
 
 == Upgrade Notice ==
+
+= 1.0.4 =
+Fixes PHP 8.4 notices and malformed rows in the change ledger CSV export. No changes to stored data or settings.
 
 = 1.0.3 =
 Tracked URL and history limits are gone. Existing data and settings are untouched, and retention now keeps more than before rather than less.
