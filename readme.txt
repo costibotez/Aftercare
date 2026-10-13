@@ -4,7 +4,7 @@ Tags: core web vitals, performance, monitoring, activity log, client reports
 Requires at least: 6.4
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.0.4
+Stable tag: 1.1.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -112,6 +112,15 @@ Yes. `wp aftercare run` executes the full daily pipeline (CrUX pull, RUM aggrega
 
 == Changelog ==
 
+= 1.1.0 =
+* New: daily Lighthouse lab checks through the PageSpeed Insights API with your existing Google key (LCP, CLS, TTFB and Total Blocking Time), shown separately from field data. Sites with too little traffic for the Chrome UX Report now get data too
+* New: lab incidents open when a reading is clearly worse than its 28-day lab baseline, the same day it is measured
+* New: a re-test runs 15 minutes after plugin, theme and core updates, plugin activations and theme switches, and an incident it opens lists the changes it was re-testing
+* New: PHP fatal errors are recorded on a PHP Errors screen with the plugin or theme that most likely caused them, written to the ledger and alerted by email, even when the error broke the site while plugins were loading
+* New: an availability check requests the homepage and tracked URLs every hour and after each update, and opens an incident when a page returns a server error, goes missing or is cut off mid-render
+* New: `wp aftercare lab` command, Site Health tests for lab checks, fatal errors and failing pages, and an Error watch section in Settings
+* Database upgrade runs automatically: one new table for fatal errors and two new incident columns
+
 = 1.0.4 =
 * The change ledger CSV export no longer raises PHP 8.4 deprecation notices
 * The CSV export now follows the standard CSV format, so entries whose details contain a backslash before a quote open correctly in spreadsheet apps
@@ -145,6 +154,9 @@ Yes. `wp aftercare run` executes the full daily pipeline (CrUX pull, RUM aggrega
 * Pro: cause attribution, white-label client reports, Slack/webhooks, extended retention
 
 == Upgrade Notice ==
+
+= 1.1.0 =
+Adds lab checks, re-tests after updates, fatal error tracking and an availability check. The database upgrades automatically and existing data and settings are kept. Lab checks need the PageSpeed Insights API enabled for your Google key.
 
 = 1.0.4 =
 Fixes PHP 8.4 notices and malformed rows in the change ledger CSV export. No changes to stored data or settings.

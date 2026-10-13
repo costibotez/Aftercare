@@ -17,7 +17,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/WordPress-6.4%2B-21759b?logo=wordpress&logoColor=white" alt="WordPress 6.4+" />
   <img src="https://img.shields.io/badge/PHP-8.1%2B-777bb4?logo=php&logoColor=white" alt="PHP 8.1+" />
-  <img src="https://img.shields.io/badge/Version-1.0.4-d97706" alt="Version 1.0.4" />
+  <img src="https://img.shields.io/badge/Version-1.1.0-d97706" alt="Version 1.1.0" />
   <img src="https://img.shields.io/badge/License-GPL--2.0--or--later-0f766e" alt="License GPL-2.0-or-later" />
 </p>
 
