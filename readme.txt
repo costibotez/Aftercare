@@ -43,8 +43,8 @@ It is built for agencies and freelancers who maintain client sites on monthly ca
 = 🧰 Fits into your workflow =
 
 * **Dashboard widget** with vitals status and open incidents on the main wp-admin screen, plus a pass / warn / fail dot in the admin bar
-* **Site Health integration** — checks that vitals collection is configured, daily checks are running and budgets are not breached
-* **WP-CLI commands** — `wp aftercare pull`, `wp aftercare check`, `wp aftercare status` and `wp aftercare run` for scripted setups and real server crons
+* **Site Health integration** — checks that vitals collection is configured, daily checks are running, lab checks reach PageSpeed Insights and budgets are not breached
+* **WP-CLI commands** — `wp aftercare pull`, `wp aftercare check`, `wp aftercare status`, `wp aftercare run` and `wp aftercare lab` for scripted setups and real server crons
 * **Weekly digest email** — vitals status, changes made and incidents from the past 7 days (opt-out in settings)
 * **Guided first run** — a three-step setup pointer until first data arrives, and suggested privacy-policy text for the RUM beacon
 

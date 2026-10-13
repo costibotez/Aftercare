@@ -59,7 +59,7 @@ jobs:
           php-version: ${{ matrix.php }}
           extensions: mysqli, zip
           coverage: none
-          tools: none
+          tools: wp-cli
 
       - name: Download WordPress
         env:

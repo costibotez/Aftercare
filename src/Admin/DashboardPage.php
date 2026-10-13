@@ -115,14 +115,14 @@ final class DashboardPage {
 		echo '<h2>' . esc_html__( 'Lab checks', 'aftercare' ) . '</h2>';
 		echo '<p class="aftercare-subtle">' . esc_html__( 'Lighthouse, mobile profile, median of 3 runs per day through the PageSpeed Insights API. Useful when field data is thin; not a measure of real visitors.', 'aftercare' ) . '</p>';
 
-		$error = get_option( LabClient::ERROR_OPT );
-		if ( is_array( $error ) && ! empty( $error['message'] ) ) {
+		$error = LabClient::last_error();
+		if ( $error ) {
 			echo '<div class="notice notice-warning inline"><p>';
 			printf(
 				/* translators: 1: URL, 2: error message from the PageSpeed Insights API */
 				esc_html__( 'The last lab check of %1$s failed: %2$s', 'aftercare' ),
-				esc_html( (string) $error['url'] ),
-				esc_html( (string) $error['message'] )
+				esc_html( $error['url'] ),
+				esc_html( $error['message'] )
 			);
 			echo '</p></div>';
 		}

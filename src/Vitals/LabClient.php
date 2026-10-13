@@ -22,7 +22,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class LabClient {
 
 	public const URL_HOOK  = 'aftercare_lab_url';
-	public const ERROR_OPT = 'aftercare_lab_last_error';
+	public const ERROR_OPT   = 'aftercare_lab_last_error';
+	public const SUCCESS_OPT = 'aftercare_lab_last_success';
 
 	private const ENDPOINT = 'https://www.googleapis.com/pagespeedonline/v5/runPagespeed';
 
@@ -36,6 +37,9 @@ final class LabClient {
 
 	/** Gap between queued URL checks, so they never pile into one cron request. */
 	private const STAGGER_SECONDS = 2 * MINUTE_IN_SECONDS;
+
+	/** HTTP status of the last PageSpeed Insights response; 0 when no response arrived. */
+	private int $last_status = 0;
 
 	public function __construct( private SampleRepository $samples ) {}
 
@@ -82,6 +86,24 @@ final class LabClient {
 	}
 
 	/**
+	 * The last failed lab check, if the most recent check of that URL failed.
+	 *
+	 * @return array{url: string, message: string, status: int, at: string}|null
+	 */
+	public static function last_error(): ?array {
+		$error = get_option( self::ERROR_OPT );
+		if ( ! is_array( $error ) || empty( $error['message'] ) ) {
+			return null;
+		}
+		return array(
+			'url'     => (string) ( $error['url'] ?? '' ),
+			'message' => (string) $error['message'],
+			'status'  => (int) ( $error['status'] ?? 0 ),
+			'at'      => (string) ( $error['at'] ?? '' ),
+		);
+	}
+
+	/**
 	 * Scheduled action: test one URL, store the median of each metric and
 	 * judge it against the lab baseline.
 	 *
@@ -125,6 +147,7 @@ final class LabClient {
 				array(
 					'url'     => $url,
 					'message' => $error,
+					'status'  => $this->last_status,
 					'at'      => Util::now(),
 				),
 				false
@@ -133,6 +156,7 @@ final class LabClient {
 		}
 
 		delete_option( self::ERROR_OPT );
+		update_option( self::SUCCESS_OPT, time(), false );
 		$now = Util::now();
 		foreach ( $values as $metric => $readings ) {
 			$this->samples->insert( $url, $metric, Util::percentile( $readings, 50.0 ), SampleRepository::SOURCE_LAB, $now );
@@ -157,13 +181,15 @@ final class LabClient {
 			self::ENDPOINT
 		);
 
-		$response = wp_remote_get( $request, array( 'timeout' => 60 ) );
+		$this->last_status = 0;
+		$response          = wp_remote_get( $request, array( 'timeout' => 60 ) );
 		if ( is_wp_error( $response ) ) {
 			return $response->get_error_message();
 		}
 
-		$data = json_decode( wp_remote_retrieve_body( $response ), true );
-		$code = wp_remote_retrieve_response_code( $response );
+		$data              = json_decode( wp_remote_retrieve_body( $response ), true );
+		$code              = (int) wp_remote_retrieve_response_code( $response );
+		$this->last_status = $code;
 		if ( 200 !== $code ) {
 			$message = is_array( $data ) ? (string) ( $data['error']['message'] ?? '' ) : '';
 			/* translators: %d: HTTP status code */

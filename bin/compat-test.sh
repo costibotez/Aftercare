@@ -54,6 +54,35 @@ if ( ! defined( 'ABSPATH' ) ) {
 require_once ABSPATH . 'wp-settings.php';
 PHP
 
+# Answer PageSpeed Insights requests made outside the flow step (WP-CLI below)
+# with a fixed Lighthouse result, so no check ever reaches Google.
+mkdir -p "$WP_DIR/wp-content/mu-plugins"
+cat > "$WP_DIR/wp-content/mu-plugins/compat-psi-mock.php" <<'PHP'
+<?php
+add_filter(
+	'pre_http_request',
+	static function ( $pre, $args, $url ) {
+		if ( ! str_contains( $url, 'pagespeedonline' ) ) {
+			return $pre;
+		}
+		$audits = array(
+			'largest-contentful-paint' => array( 'numericValue' => 2100 ),
+			'cumulative-layout-shift'  => array( 'numericValue' => 0.01 ),
+			'server-response-time'     => array( 'numericValue' => 300 ),
+			'total-blocking-time'      => array( 'numericValue' => 120 ),
+		);
+		return array(
+			'headers'  => array(),
+			'body'     => wp_json_encode( array( 'lighthouseResult' => array( 'audits' => $audits ) ) ),
+			'response' => array( 'code' => 200, 'message' => 'OK' ),
+			'cookies'  => array(),
+		);
+	},
+	5,
+	3
+);
+PHP
+
 # Swallow outgoing mail so requests made over HTTP do not depend on sendmail.
 mkdir -p "$WP_DIR/wp-content/mu-plugins"
 cat > "$WP_DIR/wp-content/mu-plugins/compat-no-mail.php" <<'PHP'
@@ -99,6 +128,35 @@ page 'admin.php?page=aftercare-settings' 200
 page 'site-health.php' 200
 page 'site-health.php?tab=debug' 200
 page 'plugins.php' 200
+
+curl -s -b "$JAR" -o "$WORK/health.html" "$BASE/wp-admin/site-health.php"
+grep -q 'PageSpeed Insights API is not enabled' "$WORK/health.html" || fail 'Site Health does not report the disabled PageSpeed Insights API'
+echo 'PASS Site Health reports the disabled PageSpeed Insights API'
+curl -s -b "$JAR" -o "$WORK/dashboard.html" "$BASE/wp-admin/admin.php?page=aftercare"
+grep -q 'The last lab check of' "$WORK/dashboard.html" || fail 'dashboard does not show the failed lab check'
+echo 'PASS dashboard shows the failed lab check'
+
+# WP-CLI, when installed (CI installs it through setup-php). WP_CLI_BIN can
+# point at a phar, for example "php /path/to/wp-cli.phar".
+WP_CLI_BIN="${WP_CLI_BIN:-wp}"
+if command -v "${WP_CLI_BIN%% *}" > /dev/null 2>&1; then
+	wpcli() {
+		# shellcheck disable=SC2086 -- WP_CLI_BIN may hold an interpreter and a path.
+		$WP_CLI_BIN --path="$WP_DIR" --url="$BASE" --allow-root "$@"
+	}
+	wpcli aftercare lab --runs=1 > "$WORK/cli-lab.txt" 2>&1 || { cat "$WORK/cli-lab.txt" >&2; fail 'wp aftercare lab failed'; }
+	grep -q 'Lab check complete for 1 of 1 URLs' "$WORK/cli-lab.txt" || { cat "$WORK/cli-lab.txt" >&2; fail 'wp aftercare lab output'; }
+	grep -q '2.10 s' "$WORK/cli-lab.txt" || { cat "$WORK/cli-lab.txt" >&2; fail 'wp aftercare lab did not print the LCP reading'; }
+	echo 'PASS wp aftercare lab'
+	if wpcli aftercare lab --page=https://example.com/untracked/ > "$WORK/cli-lab.txt" 2>&1; then
+		fail 'wp aftercare lab accepted an untracked URL'
+	fi
+	echo 'PASS wp aftercare lab rejects untracked URLs'
+	wpcli aftercare status > "$WORK/cli-status.txt" 2>&1 || { cat "$WORK/cli-status.txt" >&2; fail 'wp aftercare status failed'; }
+	echo 'PASS wp aftercare status'
+else
+	echo 'SKIP WP-CLI checks (wp not installed)'
+fi
 
 # The free build ships no reports screen.
 if [ ! -f "$WP_DIR/wp-content/plugins/aftercare/src/Reports/Builder.php" ]; then

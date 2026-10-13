@@ -151,14 +151,26 @@ switch ( $step ) {
 		// Lab check: a mocked PageSpeed Insights response is stored as lab
 		// samples and never leaks into the field readings.
 		$psi_calls = 0;
-		$psi_lcp   = 3000;
+		$psi_lcp    = 3000;
+		$psi_status = 200;
 		add_filter(
 			'pre_http_request',
-			static function ( $pre, $args, $request_url ) use ( &$psi_calls, &$psi_lcp ) {
+			static function ( $pre, $args, $request_url ) use ( &$psi_calls, &$psi_lcp, &$psi_status ) {
 				if ( ! str_contains( $request_url, 'pagespeedonline' ) ) {
 					return $pre;
 				}
 				++$psi_calls;
+				if ( 200 !== $psi_status ) {
+					return array(
+						'headers'  => array(),
+						'body'     => wp_json_encode( array( 'error' => array( 'message' => 'PageSpeed Insights API has not been used in project 123 before or it is disabled.' ) ) ),
+						'response' => array(
+							'code'    => $psi_status,
+							'message' => 'Forbidden',
+						),
+						'cookies'  => array(),
+					);
+				}
 				$audits = array(
 					'largest-contentful-paint' => array( 'numericValue' => $psi_lcp + 100 * ( ( $psi_calls - 1 ) % 3 ) ),
 					'cumulative-layout-shift'  => array( 'numericValue' => 0.02 ),
@@ -240,7 +252,20 @@ switch ( $step ) {
 		do_action( $scheduler::CHECK_HOOK );
 		check( array() === aftercare_cron_args( Aftercare\Vitals\LabClient::URL_HOOK ), 'daily cap stops extra re-tests' );
 		Aftercare\Vitals\LabScheduler::queue( $triggers[0] );
-		Aftercare\Core\Options::update( array( 'api_key' => '' ) );
+
+		$health = new Aftercare\Admin\SiteHealth();
+		check( isset( $health->add_tests( array() )['direct']['aftercare_lab'] ), 'Site Health lists the lab test when lab checks are on' );
+		check( 'good' === $health->test_lab()['status'], 'Site Health lab test passes after a completed check' );
+		$psi_status = 403;
+		$calls      = $psi_calls;
+		$lab->run_url( $url );
+		check( 1 === $psi_calls - $calls, 'an API error stops further runs' );
+		$result = $health->test_lab();
+		check( 'recommended' === $result['status'] && str_contains( $result['label'], 'not enabled' ), 'Site Health flags a disabled PageSpeed Insights API' );
+
+		// The key stays set and the error stays recorded, so the screens and
+		// Site Health checked over HTTP next render the lab section and the
+		// failing lab test.
 		break;
 
 	case 'teardown':

@@ -29,6 +29,7 @@ delete_option( 'aftercare_plugin_versions' );
 delete_option( 'aftercare_rum_buffer' );
 delete_option( 'aftercare_onboarding_dismissed' );
 delete_option( 'aftercare_lab_last_error' );
+delete_option( 'aftercare_lab_last_success' );
 delete_option( 'aftercare_lab_pending' );
 delete_option( 'aftercare_lab_change_count' );
 

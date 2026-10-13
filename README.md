@@ -71,8 +71,8 @@ Every site on a care plan eventually produces the same two conversations: *"the 
 ### 🧰 Fits into your workflow
 - **WordPress dashboard widget** — vitals status pills and open incidents on the main wp-admin screen
 - **Admin bar indicator** — a pass/warn/fail dot for administrators, on the front end too
-- **Site Health integration** — tests for "API key configured", "daily checks running" and "budgets currently breached"
-- **WP-CLI commands** — `wp aftercare pull`, `wp aftercare check`, `wp aftercare status`, `wp aftercare run`; point a real server cron at `wp aftercare run` and skip WP-Cron entirely
+- **Site Health integration** — tests for "API key configured", "daily checks running", "lab checks reach PageSpeed Insights" (flags a key without the PageSpeed Insights API enabled) and "budgets currently breached"
+- **WP-CLI commands** — `wp aftercare pull`, `wp aftercare check`, `wp aftercare status`, `wp aftercare run`, `wp aftercare lab [--page=<url>] [--runs=<n>]` (a lab check right now, printed as a table); point a real server cron at `wp aftercare run` and skip WP-Cron entirely
 - **Weekly digest email** — vitals status, changes made and incidents from the past 7 days (opt-out in settings)
 - **First-run setup guide** — a three-step pointer until vitals collection is configured
 - **Privacy-policy helper** — suggested policy text for the RUM beacon via the WordPress privacy tools

@@ -50,7 +50,7 @@ Both features reuse the ledger, incidents, notifications and attribution pipelin
 | `src/Incidents/Attribution.php` (Pro) | Boost events listed in `trigger_event_ids` |
 | `src/Admin/DashboardPage.php`, `SettingsPage.php`, `IncidentsPage.php` | Field and lab rows, lab toggles, "caught by lab check after: ..." line on incident detail |
 | `src/Admin/SiteHealth.php` | Test that the PageSpeed Insights API is enabled for the key |
-| `src/Core/CliCommands.php` | `wp aftercare lab [--url=<url>]` |
+| `src/Core/CliCommands.php` | `wp aftercare lab [--page=<url>] [--runs=<n>]` (`--url` is a global WP-CLI option, so the URL argument is named `page`) |
 | `templates/email-incident.php` | Mention the triggering change when present |
 | `bin/compat/checks.php` | Mock the API response through `pre_http_request`, assert an incident after a simulated update |
 
