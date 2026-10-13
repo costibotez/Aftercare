@@ -46,6 +46,10 @@ spl_autoload_register(
 	}
 );
 
+// Fatal errors are captured from the moment this file loads, so a plugin that
+// breaks the site while loading after Aftercare is still recorded.
+Aftercare\Errors\Collector::register();
+
 register_activation_hook( __FILE__, array( 'Aftercare\\Core\\Activator', 'activate' ) );
 register_deactivation_hook( __FILE__, array( 'Aftercare\\Core\\Activator', 'deactivate' ) );
 

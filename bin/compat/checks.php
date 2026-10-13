@@ -87,7 +87,7 @@ switch ( $step ) {
 		$result = activate_plugin( 'aftercare/aftercare.php' );
 		check( ! is_wp_error( $result ), 'plugin activates' . ( is_wp_error( $result ) ? ': ' . $result->get_error_message() : '' ) );
 		check( is_plugin_active( 'aftercare/aftercare.php' ), 'plugin is active' );
-		check( 4 === count( aftercare_tables() ), 'four tables created' );
+		check( 5 === count( aftercare_tables() ), 'five tables created' );
 		$hooks = aftercare_cron_hooks();
 		check( in_array( 'aftercare_daily_tasks', $hooks, true ), 'daily cron scheduled' );
 		check( in_array( 'aftercare_weekly_digest', $hooks, true ), 'weekly digest cron scheduled' );
@@ -266,6 +266,19 @@ switch ( $step ) {
 		// The key stays set and the error stays recorded, so the screens and
 		// Site Health checked over HTTP next render the lab section and the
 		// failing lab test.
+		break;
+
+	case 'errors':
+		global $wpdb;
+		$rows = $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM %i ORDER BY id', $wpdb->prefix . 'aftercare_errors' ), ARRAY_A );
+		check( 1 === count( $rows ), 'fatal errors grouped under one signature' );
+		$row = $rows[0] ?? array();
+		check( 3 === (int) ( $row['occurrences'] ?? 0 ), 'early and late fatal errors both counted' );
+		check( str_starts_with( (string) ( $row['file'] ?? '' ), 'wp-includes/' ), 'error file stored relative to the WordPress root' );
+		check( 'mu-plugin:compat-fatal.php' === ( $row['culprit'] ?? '' ), 'culprit found in the stack trace of a core error' );
+		check( ! str_contains( (string) ( $row['message'] ?? '' ), ABSPATH ) && ! str_contains( (string) ( $row['message'] ?? '' ), 'Stack trace' ), 'error message stripped of paths and stack trace' );
+		$entries = Aftercare\Core\Plugin::instance()->ledger()->query( array( 'type' => 'php_error' ), 10 );
+		check( 1 === count( $entries ), 'one ledger entry for a repeating fatal error' );
 		break;
 
 	case 'teardown':

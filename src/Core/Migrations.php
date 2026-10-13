@@ -6,11 +6,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Creates and upgrades the four custom tables.
+ * Creates and upgrades the custom tables.
  */
 final class Migrations {
 
-	public const SCHEMA_VERSION        = '1.2.1';
+	public const SCHEMA_VERSION        = '1.3.0';
 	public const SCHEMA_VERSION_OPTION = 'aftercare_schema_version';
 
 	public static function maybe_upgrade(): void {
@@ -94,6 +94,25 @@ final class Migrations {
 			) {$charset};"
 		);
 
+		dbDelta(
+			"CREATE TABLE {$prefix}errors (
+				id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+				signature CHAR(32) NOT NULL,
+				error_type SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+				location VARCHAR(255) NOT NULL DEFAULT '',
+				file VARCHAR(255) NOT NULL DEFAULT '',
+				line INT UNSIGNED NOT NULL DEFAULT 0,
+				message VARCHAR(255) NOT NULL DEFAULT '',
+				culprit VARCHAR(191) NOT NULL DEFAULT '',
+				occurrences INT UNSIGNED NOT NULL DEFAULT 0,
+				first_seen DATETIME NOT NULL,
+				last_seen DATETIME NOT NULL,
+				PRIMARY KEY  (id),
+				UNIQUE KEY signature (signature),
+				KEY last_seen (last_seen)
+			) {$charset};"
+		);
+
 		update_option( self::SCHEMA_VERSION_OPTION, self::SCHEMA_VERSION, false );
 	}
 
@@ -108,6 +127,7 @@ final class Migrations {
 			$prefix . 'ledger_events',
 			$prefix . 'incidents',
 			$prefix . 'reports',
+			$prefix . 'errors',
 		);
 	}
 }

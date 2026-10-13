@@ -83,6 +83,21 @@ add_filter(
 );
 PHP
 
+# Fatal errors on demand: ?aftercare_fatal=early breaks the request before any
+# output (core shows its critical error page), ?aftercare_fatal=late breaks it
+# after the page started rendering (no error page, only shutdown). Both go
+# through a core function so the culprit has to come from the stack trace.
+cat > "$WP_DIR/wp-content/mu-plugins/compat-fatal.php" <<'PHP'
+<?php
+// phpcs:ignoreFile
+$aftercare_fatal = $_GET['aftercare_fatal'] ?? '';
+if ( 'early' === $aftercare_fatal ) {
+	add_action( 'init', static function () { wp_parse_args(); } );
+} elseif ( 'late' === $aftercare_fatal ) {
+	add_action( 'wp_footer', static function () { echo 'x'; flush(); wp_parse_args(); } );
+}
+PHP
+
 # Swallow outgoing mail so requests made over HTTP do not depend on sendmail.
 mkdir -p "$WP_DIR/wp-content/mu-plugins"
 cat > "$WP_DIR/wp-content/mu-plugins/compat-no-mail.php" <<'PHP'
@@ -194,6 +209,12 @@ EXPORT="$( grep -m1 -o 'admin-post.php?action=aftercare_ledger_export[^"]*' "$WO
 curl -s -b "$JAR" -o "$WORK/ledger.csv" "$BASE/wp-admin/$EXPORT"
 head -1 "$WORK/ledger.csv" | grep -q '^occurred_at,event_type,summary' || fail 'ledger CSV export'
 echo 'PASS ledger CSV export'
+
+# Fatal errors: two early ones and one late one, three in all.
+for mode in early early late; do
+	curl -s -o /dev/null "$BASE/?aftercare_fatal=$mode"
+done
+php "$CHECKS" "$WP_DIR" errors
 
 kill "$SERVER_PID" 2>/dev/null || true
 SERVER_PID=""

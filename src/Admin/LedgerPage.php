@@ -24,6 +24,7 @@ final class LedgerPage {
 		'settings_change'   => 'dashicons-admin-settings',
 		'content_publish'   => 'dashicons-edit',
 		'user_created'      => 'dashicons-admin-users',
+		'php_error'         => 'dashicons-warning',
 	);
 
 	public static function type_label( string $type ): string {
@@ -37,6 +38,7 @@ final class LedgerPage {
 			'settings_change'   => __( 'Settings change', 'aftercare' ),
 			'content_publish'   => __( 'Content published', 'aftercare' ),
 			'user_created'      => __( 'User created', 'aftercare' ),
+			'php_error'         => __( 'PHP fatal error', 'aftercare' ),
 		);
 		return $labels[ $type ] ?? $type;
 	}

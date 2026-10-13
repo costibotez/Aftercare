@@ -129,6 +129,7 @@ final class Cron {
 
 		// 5. Retention.
 		$samples->prune( Options::vitals_retention_days() );
+		( new \Aftercare\Errors\Repository() )->prune( Options::vitals_retention_days() );
 		$ledger_days = Options::ledger_retention_days();
 		if ( $ledger_days > 0 ) {
 			( new LedgerRepository() )->prune( $ledger_days );

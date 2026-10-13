@@ -23,6 +23,7 @@ final class Repository {
 		'settings_change',
 		'content_publish',
 		'user_created',
+		'php_error',
 	);
 
 	private function table(): string {
@@ -41,7 +42,8 @@ final class Repository {
 			return 0;
 		}
 
-		$user        = wp_get_current_user();
+		// A fatal error can be recorded before pluggable functions load.
+		$user        = function_exists( 'wp_get_current_user' ) ? wp_get_current_user() : null;
 		$actor_id    = $user && $user->exists() ? (int) $user->ID : 0;
 		$actor_label = $actor_id ? $user->user_login : ( wp_doing_cron() ? 'system (cron)' : 'system' );
 
