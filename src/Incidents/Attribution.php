@@ -17,6 +17,19 @@ final class Attribution {
 	private const WINDOW_HOURS = 72;
 
 	/**
+	 * Score for a change a lab check was re-testing when it caught the
+	 * regression. The timing is direct evidence: the site was measured just
+	 * after this change and found worse.
+	 */
+	private const TRIGGER_SCORE = 95;
+
+	/**
+	 * Score for an update or activation of the plugin or theme a fatal error
+	 * was traced to. The error names its source; nothing is stronger.
+	 */
+	private const CULPRIT_SCORE = 100;
+
+	/**
 	 * Plugin-name keywords that mark a performance-relevant category.
 	 */
 	private const PERF_CATEGORIES = array(
@@ -30,17 +43,27 @@ final class Attribution {
 	/**
 	 * Rank candidate causes for an incident.
 	 *
-	 * @param string $url       Affected URL.
-	 * @param string $breach_at GMT datetime of the first bad sample.
+	 * @param string $url         Affected URL.
+	 * @param string $breach_at   GMT datetime of the first bad sample.
+	 * @param int[]  $trigger_ids Ledger events a lab change check was
+	 *                            re-testing when it caught the regression.
+	 * @param string $culprit     For a fatal error, the extension it was
+	 *                            traced to ("plugin:slug" or "theme:slug").
 	 * @return array<int, array{label: string, confidence: string, score: int, event_id?: int, event_type?: string, occurred_at?: string}>
 	 */
-	public function rank( string $url, string $breach_at ): array {
+	public function rank( string $url, string $breach_at, array $trigger_ids = array(), string $culprit = '' ): array {
 		$from   = gmdate( 'Y-m-d H:i:s', strtotime( $breach_at . ' UTC' ) - self::WINDOW_HOURS * HOUR_IN_SECONDS );
 		$events = ( new LedgerRepository() )->in_window( $from, $breach_at );
 
 		$causes = array();
 		foreach ( $events as $event ) {
-			$score = $this->score( $event, $url );
+			if ( '' !== $culprit && $this->touches_culprit( $event, $culprit ) ) {
+				$score = self::CULPRIT_SCORE;
+			} elseif ( in_array( (int) $event['id'], $trigger_ids, true ) ) {
+				$score = self::TRIGGER_SCORE;
+			} else {
+				$score = $this->score( $event, $url );
+			}
 			if ( $score <= 0 ) {
 				continue;
 			}
@@ -112,6 +135,31 @@ final class Attribution {
 			default:
 				return 0;
 		}
+	}
+
+	/**
+	 * Whether a ledger event updated, activated or switched to the extension
+	 * a fatal error was traced to.
+	 *
+	 * @param array<string, mixed> $event
+	 */
+	private function touches_culprit( array $event, string $culprit ): bool {
+		[ $kind, $slug ] = array_pad( explode( ':', $culprit, 2 ), 2, '' );
+		if ( '' === $slug ) {
+			return false;
+		}
+		$payload = json_decode( (string) ( $event['payload'] ?? '' ), true ) ?: array();
+		switch ( (string) $event['event_type'] ) {
+			case 'plugin_update':
+			case 'plugin_activate':
+				$file = (string) ( $payload['file'] ?? '' );
+				return 'plugin' === $kind && ( str_starts_with( $file, $slug . '/' ) || $file === $slug );
+			case 'theme_update':
+				return 'theme' === $kind && ( $payload['stylesheet'] ?? '' ) === $slug;
+			case 'theme_switch':
+				return 'theme' === $kind && ( $payload['new'] ?? '' ) === $slug;
+		}
+		return false;
 	}
 
 	private function is_perf_relevant( string $haystack ): bool {

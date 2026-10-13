@@ -3,7 +3,9 @@ namespace Aftercare\Admin;
 
 use Aftercare\Core\Cron;
 use Aftercare\Core\Options;
+use Aftercare\Errors\AvailabilityCheck;
 use Aftercare\Incidents\Repository as IncidentRepository;
+use Aftercare\Vitals\LabClient;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -11,7 +13,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /**
  * Site Health tests: is vitals collection configured, is the daily pipeline
- * actually running, and are any budgets currently breached.
+ * actually running, are lab checks reaching PageSpeed Insights, are fatal
+ * errors or broken pages open, and are any budgets currently breached.
  */
 final class SiteHealth {
 
@@ -32,6 +35,27 @@ final class SiteHealth {
 			'label' => __( 'Aftercare daily checks are running', 'aftercare' ),
 			'test'  => array( $this, 'test_cron' ),
 		);
+		// Only when lab checks are on: a disabled feature is not a problem.
+		// The test reads the outcome of the last real check rather than making
+		// a Lighthouse call, which takes up to 30 seconds per run.
+		if ( LabClient::enabled() ) {
+			$tests['direct']['aftercare_lab'] = array(
+				'label' => __( 'Aftercare lab checks reach PageSpeed Insights', 'aftercare' ),
+				'test'  => array( $this, 'test_lab' ),
+			);
+		}
+		if ( Options::get( 'error_watch' ) ) {
+			$tests['direct']['aftercare_errors'] = array(
+				'label' => __( 'No unresolved PHP fatal errors', 'aftercare' ),
+				'test'  => array( $this, 'test_errors' ),
+			);
+		}
+		if ( AvailabilityCheck::enabled() ) {
+			$tests['direct']['aftercare_availability'] = array(
+				'label' => __( 'Tracked pages load', 'aftercare' ),
+				'test'  => array( $this, 'test_availability' ),
+			);
+		}
 		$tests['direct']['aftercare_incidents'] = array(
 			'label' => __( 'Site performance is within budget', 'aftercare' ),
 			'test'  => array( $this, 'test_incidents' ),
@@ -92,8 +116,145 @@ final class SiteHealth {
 	/**
 	 * @return array<string, mixed>
 	 */
+	public function test_lab(): array {
+		$error   = LabClient::last_error();
+		$success = (int) get_option( LabClient::SUCCESS_OPT, 0 );
+
+		if ( $error && 403 === $error['status'] ) {
+			return $this->result(
+				'aftercare_lab',
+				'recommended',
+				__( 'The PageSpeed Insights API is not enabled for Aftercare\'s Google API key', 'aftercare' ),
+				sprintf(
+					/* translators: %s: error message from Google */
+					__( 'Lab checks use the same key as the Chrome UX Report, but the PageSpeed Insights API has to be enabled for it separately, and an API restriction on the key must allow it. Google said: %s', 'aftercare' ),
+					$error['message']
+				),
+				'<a href="https://console.cloud.google.com/apis/library/pagespeedonline.googleapis.com" target="_blank" rel="noopener">' . esc_html__( 'Enable the PageSpeed Insights API', 'aftercare' ) . '</a>'
+			);
+		}
+
+		if ( $error ) {
+			return $this->result(
+				'aftercare_lab',
+				'recommended',
+				__( 'Aftercare lab checks are failing', 'aftercare' ),
+				sprintf(
+					/* translators: 1: URL, 2: error message */
+					__( 'The last lab check of %1$s failed: %2$s Google loads the page from its own servers, so it must be publicly reachable (not behind a login, a maintenance page or a firewall).', 'aftercare' ),
+					$error['url'],
+					$error['message']
+				),
+				$this->dashboard_action()
+			);
+		}
+
+		if ( 0 === $success ) {
+			return $this->result(
+				'aftercare_lab',
+				'good',
+				__( 'Aftercare lab checks are set up', 'aftercare' ),
+				__( 'No lab check has completed yet. The first one runs with the next daily checks, or right away with the wp aftercare lab command.', 'aftercare' )
+			);
+		}
+
+		if ( time() - $success > 2 * DAY_IN_SECONDS ) {
+			return $this->result(
+				'aftercare_lab',
+				'recommended',
+				__( 'Aftercare lab checks have stopped completing', 'aftercare' ),
+				sprintf(
+					/* translators: %s: human time diff */
+					__( 'The last lab check completed %s ago. Lab checks run as scheduled tasks, so check that WP-Cron or Action Scheduler is running.', 'aftercare' ),
+					human_time_diff( $success )
+				),
+				$this->dashboard_action()
+			);
+		}
+
+		return $this->result(
+			'aftercare_lab',
+			'good',
+			__( 'Aftercare lab checks reach PageSpeed Insights', 'aftercare' ),
+			sprintf(
+				/* translators: %s: human time diff */
+				__( 'The last lab check completed %s ago.', 'aftercare' ),
+				human_time_diff( $success )
+			)
+		);
+	}
+
+	/**
+	 * @return array<string, mixed>
+	 */
+	public function test_errors(): array {
+		$open = ( new IncidentRepository() )->count_open( array( IncidentRepository::SOURCE_ERROR ) );
+		if ( 0 === $open ) {
+			return $this->result(
+				'aftercare_errors',
+				'good',
+				__( 'No unresolved PHP fatal errors', 'aftercare' ),
+				__( 'No PHP fatal error incident is open. Error incidents resolve once their error has not happened for 24 hours.', 'aftercare' )
+			);
+		}
+		return $this->result(
+			'aftercare_errors',
+			'critical',
+			sprintf(
+				/* translators: %d: number of errors */
+				_n( '%d PHP fatal error is breaking requests', '%d PHP fatal errors are breaking requests', $open, 'aftercare' ),
+				$open
+			),
+			__( 'Requests on this site are dying with a fatal error. The error list shows where each one happens and the plugin or theme it most likely came from, and the incident lists the changes made in the 72 hours before it started.', 'aftercare' ),
+			'<a href="' . esc_url( admin_url( 'admin.php?page=aftercare-errors' ) ) . '">' . esc_html__( 'View PHP errors', 'aftercare' ) . '</a>'
+		);
+	}
+
+	/**
+	 * @return array<string, mixed>
+	 */
+	public function test_availability(): array {
+		$loopback = get_option( AvailabilityCheck::LOOPBACK_OPT );
+		if ( is_array( $loopback ) ) {
+			return $this->result(
+				'aftercare_availability',
+				'recommended',
+				__( 'Aftercare cannot request this site\'s own pages', 'aftercare' ),
+				sprintf(
+					/* translators: %s: connection error */
+					__( 'The availability check could not connect to any tracked page from the server itself, which usually means the host blocks loopback requests. No page is reported as broken because of this, but broken pages also cannot be detected. Last error: %s', 'aftercare' ),
+					(string) ( $loopback['message'] ?? '' )
+				)
+			);
+		}
+
+		$open = ( new IncidentRepository() )->count_open( array( IncidentRepository::SOURCE_AVAILABILITY ) );
+		if ( 0 === $open ) {
+			return $this->result(
+				'aftercare_availability',
+				'good',
+				__( 'Tracked pages load', 'aftercare' ),
+				__( 'The homepage and tracked URLs answered the last availability check without a server error, a missing page or a cut-off page.', 'aftercare' )
+			);
+		}
+		return $this->result(
+			'aftercare_availability',
+			'critical',
+			sprintf(
+				/* translators: %d: number of pages */
+				_n( '%d tracked page is failing to load', '%d tracked pages are failing to load', $open, 'aftercare' ),
+				$open
+			),
+			__( 'A tracked page failed two availability checks in a row. The incident shows the response and every site change from the 72 hours before.', 'aftercare' ),
+			'<a href="' . esc_url( admin_url( 'admin.php?page=aftercare-incidents' ) ) . '">' . esc_html__( 'View incidents', 'aftercare' ) . '</a>'
+		);
+	}
+
+	/**
+	 * @return array<string, mixed>
+	 */
 	public function test_incidents(): array {
-		$open = ( new IncidentRepository() )->count_open();
+		$open = ( new IncidentRepository() )->count_open( IncidentRepository::VITALS_SOURCES );
 		if ( 0 === $open ) {
 			return $this->result(
 				'aftercare_incidents',

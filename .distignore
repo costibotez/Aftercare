@@ -25,6 +25,7 @@ languages
 .gitignore
 .DS_Store
 README.md
+docs
 composer.json
 composer.lock
 node_modules

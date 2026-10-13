@@ -38,7 +38,7 @@ final class SettingsPage {
 		echo '<h2>' . esc_html__( 'Vitals collection', 'aftercare' ) . '</h2>';
 		echo '<table class="form-table" role="presentation">';
 
-		echo '<tr><th scope="row"><label for="ac-api-key">' . esc_html__( 'Google API key (CrUX)', 'aftercare' ) . '</label></th><td>';
+		echo '<tr><th scope="row"><label for="ac-api-key">' . esc_html__( 'Google API key', 'aftercare' ) . '</label></th><td>';
 		echo '<input type="password" id="ac-api-key" name="api_key" value="' . esc_attr( (string) $options['api_key'] ) . '" class="regular-text" autocomplete="off" />';
 		echo '<p class="description">' . wp_kses_post( __( 'Your own key for the Chrome UX Report API. Create one in the <a href="https://console.cloud.google.com/apis/library/chromeuxreport.googleapis.com" target="_blank" rel="noopener">Google Cloud Console</a> (free tier is plenty). Aftercare only calls Google with your key — nothing is sent anywhere else.', 'aftercare' ) ) . '</p>';
 		echo '</td></tr>';
@@ -53,6 +53,11 @@ final class SettingsPage {
 		);
 		echo '</p></td></tr>';
 
+		echo '<tr><th scope="row">' . esc_html__( 'Lab checks', 'aftercare' ) . '</th><td>';
+		echo '<label><input type="checkbox" name="lab_enabled" value="1" ' . checked( (bool) $options['lab_enabled'], true, false ) . ' /> ' . esc_html__( 'Run a daily Lighthouse lab test (mobile) of the homepage and tracked URLs through the PageSpeed Insights API', 'aftercare' ) . '</label>';
+		echo '<p class="description">' . wp_kses_post( __( 'Lab data works even on sites with too little traffic for the Chrome UX Report. It uses the same Google API key, which needs the <a href="https://console.cloud.google.com/apis/library/pagespeedonline.googleapis.com" target="_blank" rel="noopener">PageSpeed Insights API</a> enabled as well. Google loads the pages from its own servers, so they must be publicly reachable. Lab values are shown separately from field data and never mixed with it.', 'aftercare' ) ) . '</p>';
+		echo '</td></tr>';
+
 		echo '<tr><th scope="row">' . esc_html__( 'Real-user monitoring', 'aftercare' ) . '</th><td>';
 		echo '<label><input type="checkbox" name="rum_enabled" value="1" ' . checked( (bool) $options['rum_enabled'], true, false ) . ' /> ' . esc_html__( 'Load the RUM beacon (~2 KB) for a sample of visitors and record field vitals from real visits', 'aftercare' ) . '</label>';
 		echo '<p><label for="ac-rum-rate">' . esc_html__( 'Sample rate (% of visits):', 'aftercare' ) . ' </label>';
@@ -61,14 +66,27 @@ final class SettingsPage {
 
 		echo '</table>';
 
+		echo '<h2>' . esc_html__( 'Error watch', 'aftercare' ) . '</h2>';
+		echo '<table class="form-table" role="presentation">';
+		echo '<tr><th scope="row">' . esc_html__( 'PHP fatal errors', 'aftercare' ) . '</th><td>';
+		echo '<label><input type="checkbox" name="error_watch" value="1" ' . checked( (bool) $options['error_watch'], true, false ) . ' /> ' . esc_html__( 'Record PHP fatal errors in the ledger and open an incident when a new one appears', 'aftercare' ) . '</label>';
+		echo '<p class="description">' . esc_html__( 'Stored on this site only: the file, line and first line of the message, without server paths, request data or visitor details. An error that stops for 24 hours resolves its incident.', 'aftercare' ) . '</p>';
+		echo '</td></tr>';
+		echo '<tr><th scope="row">' . esc_html__( 'Availability', 'aftercare' ) . '</th><td>';
+		echo '<label><input type="checkbox" name="availability_watch" value="1" ' . checked( (bool) $options['availability_watch'], true, false ) . ' /> ' . esc_html__( 'Request the homepage and tracked URLs every hour and 15 minutes after each update, and open an incident when one fails twice in a row', 'aftercare' ) . '</label>';
+		echo '<p class="description">' . esc_html__( 'A failure is a server error, a missing page or a page cut off before it finished rendering. The check runs on this site, so it cannot notice the whole server being down; use an external uptime monitor for that.', 'aftercare' ) . '</p>';
+		echo '</td></tr>';
+		echo '</table>';
+
 		echo '<h2>' . esc_html__( 'Performance budgets', 'aftercare' ) . '</h2>';
-		echo '<p class="description">' . esc_html__( 'A daily p75 above budget, or 20% worse than the 28-day baseline, opens an incident.', 'aftercare' ) . '</p>';
+		echo '<p class="description">' . esc_html__( 'A daily field p75 above budget, or 20% worse than the 28-day baseline, opens an incident. Lab checks open an incident only when a reading is 20% worse than the 28-day lab baseline and the change is larger than normal Lighthouse variation; for lab data the budgets set the status shown on the dashboard.', 'aftercare' ) . '</p>';
 		echo '<table class="form-table" role="presentation">';
 		$budget_fields = array(
 			'LCP'  => array( __( 'LCP budget (ms)', 'aftercare' ), '2500' ),
 			'INP'  => array( __( 'INP budget (ms)', 'aftercare' ), '200' ),
 			'CLS'  => array( __( 'CLS budget (score)', 'aftercare' ), '0.1' ),
 			'TTFB' => array( __( 'TTFB budget (ms)', 'aftercare' ), '800' ),
+			'TBT'  => array( __( 'TBT budget (ms, lab status only)', 'aftercare' ), '200' ),
 		);
 		foreach ( $budget_fields as $metric => [ $label, $placeholder ] ) {
 			$step = 'CLS' === $metric ? '0.01' : '50';
@@ -165,7 +183,7 @@ final class SettingsPage {
 
 		$budgets_in = (array) wp_unslash( $_POST['budgets'] ?? array() );
 		$budgets    = array();
-		foreach ( Options::METRICS as $metric ) {
+		foreach ( array_keys( Options::defaults()['budgets'] ) as $metric ) {
 			$budgets[ $metric ] = max( 0, (float) ( $budgets_in[ $metric ] ?? Options::defaults()['budgets'][ $metric ] ) );
 		}
 
@@ -174,6 +192,9 @@ final class SettingsPage {
 			'tracked_urls'           => $urls,
 			'budgets'                => $budgets,
 			'rum_enabled'            => ! empty( $_POST['rum_enabled'] ),
+			'lab_enabled'            => ! empty( $_POST['lab_enabled'] ),
+			'error_watch'            => ! empty( $_POST['error_watch'] ),
+			'availability_watch'     => ! empty( $_POST['availability_watch'] ),
 			'rum_sample_rate'        => isset( $_POST['rum_sample_rate'] ) ? max( 1, min( 100, absint( wp_unslash( $_POST['rum_sample_rate'] ) ) ) ) : 10,
 			'alert_email'            => sanitize_email( wp_unslash( $_POST['alert_email'] ?? '' ) ),
 			'weekly_digest'          => ! empty( $_POST['weekly_digest'] ),

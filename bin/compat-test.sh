@@ -54,11 +54,88 @@ if ( ! defined( 'ABSPATH' ) ) {
 require_once ABSPATH . 'wp-settings.php';
 PHP
 
+# Answer PageSpeed Insights requests made outside the flow step (WP-CLI below)
+# with a fixed Lighthouse result, so no check ever reaches Google.
+mkdir -p "$WP_DIR/wp-content/mu-plugins"
+cat > "$WP_DIR/wp-content/mu-plugins/compat-psi-mock.php" <<'PHP'
+<?php
+add_filter(
+	'pre_http_request',
+	static function ( $pre, $args, $url ) {
+		if ( ! str_contains( $url, 'pagespeedonline' ) ) {
+			return $pre;
+		}
+		$audits = array(
+			'largest-contentful-paint' => array( 'numericValue' => 2100 ),
+			'cumulative-layout-shift'  => array( 'numericValue' => 0.01 ),
+			'server-response-time'     => array( 'numericValue' => 300 ),
+			'total-blocking-time'      => array( 'numericValue' => 120 ),
+		);
+		return array(
+			'headers'  => array(),
+			'body'     => wp_json_encode( array( 'lighthouseResult' => array( 'audits' => $audits ) ) ),
+			'response' => array( 'code' => 200, 'message' => 'OK' ),
+			'cookies'  => array(),
+		);
+	},
+	5,
+	3
+);
+PHP
+
+# Fatal errors on demand: ?aftercare_fatal=boot breaks the request while
+# plugins load (right after Aftercare, before plugins_loaded), early breaks it
+# before any output (core shows its critical error page), late breaks it after
+# the page started rendering (no error page, only shutdown). All go through a
+# core function so the culprit has to come from the stack trace.
+cat > "$WP_DIR/wp-content/mu-plugins/compat-fatal.php" <<'PHP'
+<?php
+// phpcs:ignoreFile
+$aftercare_fatal = $_GET['aftercare_fatal'] ?? '';
+if ( 'boot' === $aftercare_fatal ) {
+	add_action( 'plugin_loaded', static function ( $file ) { if ( str_ends_with( $file, '/aftercare.php' ) ) { wp_parse_args(); } } );
+} elseif ( 'early' === $aftercare_fatal ) {
+	add_action( 'init', static function () { wp_parse_args(); } );
+} elseif ( 'late' === $aftercare_fatal ) {
+	add_action( 'wp_footer', static function () { echo 'x'; flush(); wp_parse_args(); } );
+}
+// A page whose health the availability checks switch through an option.
+if ( isset( $_GET['compat_page'] ) ) {
+	add_action(
+		'template_redirect',
+		static function () {
+			$mode = get_option( 'compat_page_mode', 'ok' );
+			if ( '503' === $mode ) {
+				status_header( 503 );
+				exit;
+			}
+			if ( 'cut' === $mode ) {
+				header( 'Content-Type: text/html; charset=UTF-8' );
+				echo '<!doctype html><html><body><p>Half a page';
+				exit;
+			}
+		}
+	);
+}
+PHP
+
 # Swallow outgoing mail so requests made over HTTP do not depend on sendmail.
 mkdir -p "$WP_DIR/wp-content/mu-plugins"
 cat > "$WP_DIR/wp-content/mu-plugins/compat-no-mail.php" <<'PHP'
 <?php
-add_filter( 'pre_wp_mail', '__return_true' );
+// Keep the subjects, so the checks can see mail sent from inside a request
+// that died of a fatal error.
+add_filter(
+	'pre_wp_mail',
+	static function ( $short, $atts ) {
+		$log   = (array) get_option( 'compat_mail_log', array() );
+		$log[] = $atts['subject'];
+		update_option( 'compat_mail_log', $log, false );
+		return true;
+	},
+	10,
+	2
+);
 PHP
 
 rm -rf "$WP_DIR/wp-content/plugins/aftercare"
@@ -100,6 +177,35 @@ page 'site-health.php' 200
 page 'site-health.php?tab=debug' 200
 page 'plugins.php' 200
 
+curl -s -b "$JAR" -o "$WORK/health.html" "$BASE/wp-admin/site-health.php"
+grep -q 'PageSpeed Insights API is not enabled' "$WORK/health.html" || fail 'Site Health does not report the disabled PageSpeed Insights API'
+echo 'PASS Site Health reports the disabled PageSpeed Insights API'
+curl -s -b "$JAR" -o "$WORK/dashboard.html" "$BASE/wp-admin/admin.php?page=aftercare"
+grep -q 'The last lab check of' "$WORK/dashboard.html" || fail 'dashboard does not show the failed lab check'
+echo 'PASS dashboard shows the failed lab check'
+
+# WP-CLI, when installed (CI installs it through setup-php). WP_CLI_BIN can
+# point at a phar, for example "php /path/to/wp-cli.phar".
+WP_CLI_BIN="${WP_CLI_BIN:-wp}"
+if command -v "${WP_CLI_BIN%% *}" > /dev/null 2>&1; then
+	wpcli() {
+		# shellcheck disable=SC2086 -- WP_CLI_BIN may hold an interpreter and a path.
+		$WP_CLI_BIN --path="$WP_DIR" --url="$BASE" --allow-root "$@"
+	}
+	wpcli aftercare lab --runs=1 > "$WORK/cli-lab.txt" 2>&1 || { cat "$WORK/cli-lab.txt" >&2; fail 'wp aftercare lab failed'; }
+	grep -q 'Lab check complete for 1 of 1 URLs' "$WORK/cli-lab.txt" || { cat "$WORK/cli-lab.txt" >&2; fail 'wp aftercare lab output'; }
+	grep -q '2.10 s' "$WORK/cli-lab.txt" || { cat "$WORK/cli-lab.txt" >&2; fail 'wp aftercare lab did not print the LCP reading'; }
+	echo 'PASS wp aftercare lab'
+	if wpcli aftercare lab --page=https://example.com/untracked/ > "$WORK/cli-lab.txt" 2>&1; then
+		fail 'wp aftercare lab accepted an untracked URL'
+	fi
+	echo 'PASS wp aftercare lab rejects untracked URLs'
+	wpcli aftercare status > "$WORK/cli-status.txt" 2>&1 || { cat "$WORK/cli-status.txt" >&2; fail 'wp aftercare status failed'; }
+	echo 'PASS wp aftercare status'
+else
+	echo 'SKIP WP-CLI checks (wp not installed)'
+fi
+
 # The free build ships no reports screen.
 if [ ! -f "$WP_DIR/wp-content/plugins/aftercare/src/Reports/Builder.php" ]; then
 	page 'admin.php?page=aftercare-reports' 403
@@ -114,7 +220,7 @@ curl -s -b "$JAR" -o "$WORK/settings.html" "$BASE/wp-admin/admin.php?page=afterc
 NONCE="$( grep -m1 -o 'name="_wpnonce" value="[^"]*"' "$WORK/settings.html" | sed 's/.*value="//;s/"$//' )"
 [ -n "$NONCE" ] || fail 'settings nonce not found'
 REDIRECT="$( curl -s -b "$JAR" -o /dev/null -w '%{redirect_url}' \
-	-d "action=aftercare_save_settings&_wpnonce=$NONCE&rum_enabled=1&rum_sample_rate=100&alert_email=admin@example.com" \
+	-d "action=aftercare_save_settings&_wpnonce=$NONCE&rum_enabled=1&rum_sample_rate=100&alert_email=admin@example.com&error_watch=1&availability_watch=1" \
 	"$BASE/wp-admin/admin-post.php" )"
 [[ "$REDIRECT" == *updated=1* ]] || fail "settings save redirected to '$REDIRECT'"
 echo 'PASS settings save'
@@ -136,6 +242,22 @@ EXPORT="$( grep -m1 -o 'admin-post.php?action=aftercare_ledger_export[^"]*' "$WO
 curl -s -b "$JAR" -o "$WORK/ledger.csv" "$BASE/wp-admin/$EXPORT"
 head -1 "$WORK/ledger.csv" | grep -q '^occurred_at,event_type,summary' || fail 'ledger CSV export'
 echo 'PASS ledger CSV export'
+
+# Fatal errors: one while plugins load, two early ones and one late one.
+for mode in boot early early late; do
+	curl -s -o /dev/null "$BASE/?aftercare_fatal=$mode"
+done
+php "$CHECKS" "$WP_DIR" errors
+php "$CHECKS" "$WP_DIR" availability
+
+# Every incident kind now exists: render each detail page and the error list.
+page 'admin.php?page=aftercare-errors' 200
+grep -q 'Must-use plugin: compat-fatal.php' "$WORK/page.html" || fail 'error list does not name the likely source'
+curl -s -b "$JAR" -o "$WORK/incidents.html" "$BASE/wp-admin/admin.php?page=aftercare-incidents"
+for id in $( grep -o 'incident=[0-9]*' "$WORK/incidents.html" | cut -d= -f2 | sort -un ); do
+	page "admin.php?page=aftercare-incidents&incident=$id" 200
+done
+page 'site-health.php' 200
 
 kill "$SERVER_PID" 2>/dev/null || true
 SERVER_PID=""

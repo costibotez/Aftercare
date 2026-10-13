@@ -5,6 +5,7 @@ use Aftercare\Core\Options;
 use Aftercare\Core\Util;
 use Aftercare\Incidents\Repository as IncidentRepository;
 use Aftercare\Ledger\Repository as LedgerRepository;
+use Aftercare\Vitals\LabClient;
 use Aftercare\Vitals\SampleRepository;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -51,9 +52,13 @@ final class DashboardPage {
 
 		echo '<div class="aftercare-cards">';
 		foreach ( Options::METRICS as $metric ) {
-			$this->render_metric_card( $samples, $primary_url, $metric );
+			$this->render_metric_card( $samples->series( $primary_url, $metric, 30 ), $primary_url, $metric );
 		}
 		echo '</div>';
+
+		if ( LabClient::enabled() ) {
+			$this->render_lab_section( $samples, $primary_url );
+		}
 
 		echo '<div class="aftercare-columns">';
 
@@ -102,8 +107,37 @@ final class DashboardPage {
 		Menu::footer();
 	}
 
-	private function render_metric_card( SampleRepository $samples, string $url, string $metric ): void {
-		$series = $samples->series( $url, $metric, 30 );
+	/**
+	 * Lab cards sit under their own heading and are never merged into the
+	 * field cards above: a Lighthouse run is a synthetic load, not a visitor.
+	 */
+	private function render_lab_section( SampleRepository $samples, string $url ): void {
+		echo '<h2>' . esc_html__( 'Lab checks', 'aftercare' ) . '</h2>';
+		echo '<p class="aftercare-subtle">' . esc_html__( 'Lighthouse, mobile profile, median of 3 runs per day through the PageSpeed Insights API. Useful when field data is thin; not a measure of real visitors.', 'aftercare' ) . '</p>';
+
+		$error = LabClient::last_error();
+		if ( $error ) {
+			echo '<div class="notice notice-warning inline"><p>';
+			printf(
+				/* translators: 1: URL, 2: error message from the PageSpeed Insights API */
+				esc_html__( 'The last lab check of %1$s failed: %2$s', 'aftercare' ),
+				esc_html( $error['url'] ),
+				esc_html( $error['message'] )
+			);
+			echo '</p></div>';
+		}
+
+		echo '<div class="aftercare-cards">';
+		foreach ( Options::LAB_METRICS as $metric ) {
+			$this->render_metric_card( $samples->lab_series( $url, $metric, 30 ), $url, $metric );
+		}
+		echo '</div>';
+	}
+
+	/**
+	 * @param array<int, array{day: string, value: float}> $series
+	 */
+	private function render_metric_card( array $series, string $url, string $metric ): void {
 		$latest = ! empty( $series ) ? end( $series )['value'] : null;
 		$budget = Options::budget( $metric, $url );
 		$status = \Aftercare\Vitals\Status::evaluate( $latest, $budget );

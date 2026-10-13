@@ -6,14 +6,17 @@
  */
 
 use Aftercare\Core\Util;
+use Aftercare\Incidents\Repository as IncidentRepository;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
 $aftercare_metric   = (string) $aftercare_incident['metric'];
+$aftercare_is_lab   = IncidentRepository::SOURCE_LAB === ( $aftercare_incident['sample_source'] ?? '' );
 $aftercare_site     = wp_specialchars_decode( get_bloginfo( 'name' ), ENT_QUOTES );
 $aftercare_detail   = admin_url( 'admin.php?page=aftercare-incidents&incident=' . (int) $aftercare_incident['id'] );
+$aftercare_triggers = ( new \Aftercare\Ledger\Repository() )->find_many( IncidentRepository::trigger_ids( $aftercare_incident ) );
 $aftercare_baseline = null !== $aftercare_incident['baseline_p75']
 	? Util::format_metric( $aftercare_metric, (float) $aftercare_incident['baseline_p75'] )
 	: __( 'n/a', 'aftercare' );
@@ -26,18 +29,32 @@ $aftercare_baseline = null !== $aftercare_incident['baseline_p75']
 		<p style="margin-top:0;">
 			<?php
 			printf(
-				/* translators: 1: metric, 2: URL, 3: site name */
-				esc_html__( '%1$s breached its performance budget on %2$s (%3$s).', 'aftercare' ),
+				$aftercare_is_lab
+					/* translators: 1: metric, 2: URL, 3: site name */
+					? esc_html__( '%1$s regressed against its 28-day baseline in a Lighthouse lab check of %2$s (%3$s).', 'aftercare' )
+					/* translators: 1: metric, 2: URL, 3: site name */
+					: esc_html__( '%1$s breached its performance budget on %2$s (%3$s).', 'aftercare' ),
 				'<strong>' . esc_html( $aftercare_metric ) . '</strong>',
 				'<a href="' . esc_url( (string) $aftercare_incident['url'] ) . '">' . esc_html( (string) $aftercare_incident['url'] ) . '</a>',
 				esc_html( $aftercare_site )
 			);
 			?>
 		</p>
+		<?php if ( $aftercare_triggers ) : ?>
+			<p style="margin-bottom:4px;"><strong><?php esc_html_e( 'The lab re-test ran after these changes:', 'aftercare' ); ?></strong></p>
+			<ul style="margin-top:0;padding-left:18px;">
+				<?php foreach ( $aftercare_triggers as $aftercare_event ) : ?>
+					<li>
+						<?php echo esc_html( (string) $aftercare_event['summary'] ); ?>
+						<span style="color:#6b7280;">(<?php echo esc_html( (string) $aftercare_event['actor_label'] . ', ' . (string) $aftercare_event['occurred_at'] . ' UTC' ); ?>)</span>
+					</li>
+				<?php endforeach; ?>
+			</ul>
+		<?php endif; ?>
 		<table style="width:100%;border-collapse:collapse;margin:16px 0;" role="presentation">
 			<tr>
 				<td style="padding:8px 12px;background:#fee2e2;border-radius:6px 0 0 6px;">
-					<div style="font-size:11px;color:#6b7280;text-transform:uppercase;"><?php esc_html_e( 'Measured p75', 'aftercare' ); ?></div>
+					<div style="font-size:11px;color:#6b7280;text-transform:uppercase;"><?php $aftercare_is_lab ? esc_html_e( 'Lab reading', 'aftercare' ) : esc_html_e( 'Measured p75', 'aftercare' ); ?></div>
 					<div style="font-size:20px;font-weight:700;color:#b91c1c;"><?php echo esc_html( Util::format_metric( $aftercare_metric, (float) $aftercare_incident['breach_p75'] ) ); ?></div>
 				</td>
 				<td style="padding:8px 12px;background:#f9fafb;">
@@ -45,7 +62,7 @@ $aftercare_baseline = null !== $aftercare_incident['baseline_p75']
 					<div style="font-size:20px;font-weight:700;"><?php echo esc_html( Util::format_metric( $aftercare_metric, (float) $aftercare_incident['budget_value'] ) ); ?></div>
 				</td>
 				<td style="padding:8px 12px;background:#f9fafb;border-radius:0 6px 6px 0;">
-					<div style="font-size:11px;color:#6b7280;text-transform:uppercase;"><?php esc_html_e( '28-day baseline', 'aftercare' ); ?></div>
+					<div style="font-size:11px;color:#6b7280;text-transform:uppercase;"><?php $aftercare_is_lab ? esc_html_e( '28-day lab baseline', 'aftercare' ) : esc_html_e( '28-day baseline', 'aftercare' ); ?></div>
 					<div style="font-size:20px;font-weight:700;"><?php echo esc_html( $aftercare_baseline ); ?></div>
 				</td>
 			</tr>

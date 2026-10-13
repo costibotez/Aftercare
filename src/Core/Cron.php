@@ -6,6 +6,8 @@ use Aftercare\Ledger\Repository as LedgerRepository;
 use Aftercare\Reports\Builder as ReportBuilder;
 use Aftercare\Vitals\BreachDetector;
 use Aftercare\Vitals\CruxClient;
+use Aftercare\Vitals\LabClient;
+use Aftercare\Vitals\LabScheduler;
 use Aftercare\Vitals\RumController;
 use Aftercare\Vitals\SampleRepository;
 
@@ -14,8 +16,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Daily pipeline: pull CrUX, aggregate RUM, detect breaches, prune old data,
- * and (Pro) generate the monthly report draft on the 1st.
+ * Daily pipeline: pull CrUX, queue lab checks, aggregate RUM, detect
+ * breaches, prune old data, and (Pro) generate the monthly report draft on the 1st.
  *
  * Uses Action Scheduler when present (e.g. WooCommerce installs), WP-Cron
  * otherwise.
@@ -24,10 +26,12 @@ final class Cron {
 
 	public const DAILY_HOOK   = 'aftercare_daily_tasks';
 	public const WEEKLY_HOOK  = 'aftercare_weekly_digest';
+	public const HOURLY_HOOK  = 'aftercare_hourly_tasks';
 	public const LAST_RUN_OPT = 'aftercare_cron_last_run';
 
 	public function register(): void {
 		add_action( self::DAILY_HOOK, array( $this, 'run_daily' ) );
+		add_action( self::HOURLY_HOOK, array( $this, 'run_hourly' ) );
 		add_action( 'admin_notices', array( $this, 'maybe_warn_cron_health' ) );
 
 		// Self-heal: if the recurring event vanished (e.g. after a cron reset), re-add it.
@@ -40,6 +44,7 @@ final class Cron {
 		$hooks = array(
 			self::DAILY_HOOK  => array( DAY_IN_SECONDS, 'daily' ),
 			self::WEEKLY_HOOK => array( WEEK_IN_SECONDS, 'weekly' ),
+			self::HOURLY_HOOK => array( HOUR_IN_SECONDS, 'hourly' ),
 		);
 		foreach ( $hooks as $hook => [ $interval, $recurrence ] ) {
 			if ( self::uses_action_scheduler() ) {
@@ -53,16 +58,46 @@ final class Cron {
 	}
 
 	public static function unschedule(): void {
-		foreach ( array( self::DAILY_HOOK, self::WEEKLY_HOOK ) as $hook ) {
+		foreach ( array( self::DAILY_HOOK, self::WEEKLY_HOOK, self::HOURLY_HOOK ) as $hook ) {
 			if ( self::uses_action_scheduler() ) {
 				as_unschedule_all_actions( $hook, array(), 'aftercare' );
 			}
 			wp_clear_scheduled_hook( $hook );
 		}
+
+		self::unschedule_hook( LabClient::URL_HOOK );
+		self::unschedule_hook( LabScheduler::CHECK_HOOK );
+		self::unschedule_hook( \Aftercare\Errors\AvailabilityCheck::CONFIRM_HOOK );
+	}
+
+	/**
+	 * Remove every pending one-off action for a hook, whatever its arguments.
+	 */
+	public static function unschedule_hook( string $hook ): void {
+		if ( self::uses_action_scheduler() ) {
+			as_unschedule_all_actions( $hook );
+		}
+		wp_unschedule_hook( $hook );
+	}
+
+	/**
+	 * Queue a one-off action, skipping it when the same action with the same
+	 * arguments is already pending.
+	 *
+	 * @param array<int, mixed> $args
+	 */
+	public static function schedule_single( int $timestamp, string $hook, array $args = array() ): void {
+		if ( self::uses_action_scheduler() ) {
+			if ( false === as_next_scheduled_action( $hook, $args, 'aftercare' ) ) {
+				as_schedule_single_action( $timestamp, $hook, $args, 'aftercare' );
+			}
+		} elseif ( ! wp_next_scheduled( $hook, $args ) ) {
+			wp_schedule_single_event( $timestamp, $hook, $args );
+		}
 	}
 
 	private static function is_scheduled(): bool {
-		foreach ( array( self::DAILY_HOOK, self::WEEKLY_HOOK ) as $hook ) {
+		foreach ( array( self::DAILY_HOOK, self::WEEKLY_HOOK, self::HOURLY_HOOK ) as $hook ) {
 			$next = self::uses_action_scheduler() ? false !== as_next_scheduled_action( $hook ) : (bool) wp_next_scheduled( $hook );
 			if ( ! $next ) {
 				return false;
@@ -73,6 +108,7 @@ final class Cron {
 
 	private static function uses_action_scheduler(): bool {
 		return function_exists( 'as_schedule_recurring_action' )
+			&& function_exists( 'as_schedule_single_action' )
 			&& function_exists( 'as_next_scheduled_action' )
 			&& function_exists( 'as_unschedule_all_actions' );
 	}
@@ -85,31 +121,45 @@ final class Cron {
 		// 1. Pull yesterday's CrUX p75 values for every tracked URL.
 		( new CruxClient( $samples ) )->pull_all();
 
-		// 2. Fold buffered RUM beacons into daily p75 samples.
+		// 2. Queue today's lab checks. Each URL runs in its own action, so this
+		//    returns at once and the results land over the next few minutes.
+		( new LabClient( $samples ) )->queue_daily();
+
+		// 3. Fold buffered RUM beacons into daily p75 samples.
 		RumController::aggregate_buffer( $samples );
 
-		// 3. Compare against budgets and baseline; open/resolve incidents.
+		// 4. Compare against budgets and baseline; open/resolve incidents.
 		( new BreachDetector( $samples ) )->run();
 
-		// 4. Retention.
+		// 5. Retention.
 		$samples->prune( Options::vitals_retention_days() );
+		( new \Aftercare\Errors\Repository() )->prune( Options::vitals_retention_days() );
 		$ledger_days = Options::ledger_retention_days();
 		if ( $ledger_days > 0 ) {
 			( new LedgerRepository() )->prune( $ledger_days );
 		}
 
-		// 5. Keep the plugin version snapshot fresh for update attribution,
+		// 6. Keep the plugin version snapshot fresh for update attribution,
 		//    and refresh the cached status snapshot (admin bar, widget).
 		Listeners::snapshot_plugin_versions();
 		\Aftercare\Vitals\Status::flush_cache();
 
-		// 6. Draft last month's client report on the 1st of each month, when
+		// 7. Draft last month's client report on the 1st of each month, when
 		//    the report builder add-on is installed.
 		if ( class_exists( ReportBuilder::class ) && '1' === gmdate( 'j' ) ) {
 			$prev_month = (int) gmdate( 'n', strtotime( 'first day of last month' ) );
 			$prev_year  = (int) gmdate( 'Y', strtotime( 'first day of last month' ) );
 			( new ReportBuilder() )->generate_draft( $prev_month, $prev_year );
 		}
+	}
+
+	/**
+	 * Hourly: resolve error incidents whose error has gone quiet, and check
+	 * that tracked pages still load.
+	 */
+	public function run_hourly(): void {
+		( new \Aftercare\Errors\Incidents() )->resolve_quiet();
+		( new \Aftercare\Errors\AvailabilityCheck() )->run();
 	}
 
 	/**

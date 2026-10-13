@@ -21,6 +21,7 @@ It is built for agencies and freelancers who maintain client sites on monthly ca
 = 📈 Core Web Vitals monitor =
 
 * Daily p75 values for **LCP, INP, CLS and TTFB** from the Chrome UX Report — real field data from actual Chrome users, fetched with your own free Google API key
+* Daily **Lighthouse lab checks** (mobile, median of 3 runs) through the PageSpeed Insights API with the same key: LCP, CLS, TTFB and Total Blocking Time, so sites with too little traffic for the Chrome UX Report still get data. Shown separately from field data, never mixed with it
 * Optional **real-user monitoring beacon**: ~2 KB, no external libraries or services, loaded for a configurable sample of visits and aggregated to daily p75 on your own site
 * Track the homepage plus as many other URLs as you like, with sparkline trends and pass / warn / fail status pills
 
@@ -28,6 +29,8 @@ It is built for agencies and freelancers who maintain client sites on monthly ca
 
 * Editable budgets per metric (defaults: LCP 2.5 s, INP 200 ms, CLS 0.1, TTFB 800 ms)
 * A daily p75 over budget — or 20% worse than your 28-day baseline — opens an incident and emails you
+* A lab reading 20% worse than the 28-day lab baseline, and worse by more than normal Lighthouse variation, opens a separate lab incident the same day it is measured
+* **Re-test after every change**: 15 minutes after a plugin or theme update, plugin activation, theme switch or core update, Aftercare runs a lab check again. A bulk update produces one re-test, and an incident it opens names the changes it was re-testing
 * Incidents track status (open, acknowledged, resolved, dismissed) and resolve automatically when the metric recovers
 * Every incident shows the raw change timeline from the 72 hours before the breach
 
@@ -37,11 +40,18 @@ It is built for agencies and freelancers who maintain client sites on monthly ca
 * Human-readable entries with the responsible user: "WP Rocket updated 3.15 to 3.16 by admin"
 * Filterable timeline by type and date, CSV export, and the full history kept by default
 
+= 🚨 Error watch =
+
+* **PHP fatal errors** are recorded from the moment Aftercare loads, grouped by file and line on a PHP Errors screen with the plugin or theme that most likely caused them
+* A new fatal error writes a ledger entry and opens an incident with an email alert, even when it broke the site while plugins were loading
+* An **availability check** requests the homepage and tracked URLs every hour and shortly after each update, and opens an incident when a page returns a server error, goes missing or is cut off before it finishes rendering
+* Only the file, line and first line of the message are stored, on your own site, with nothing about the visitor
+
 = 🧰 Fits into your workflow =
 
 * **Dashboard widget** with vitals status and open incidents on the main wp-admin screen, plus a pass / warn / fail dot in the admin bar
-* **Site Health integration** — checks that vitals collection is configured, daily checks are running and budgets are not breached
-* **WP-CLI commands** — `wp aftercare pull`, `wp aftercare check`, `wp aftercare status` and `wp aftercare run` for scripted setups and real server crons
+* **Site Health integration** — checks that vitals collection is configured, daily checks are running, lab checks reach PageSpeed Insights and budgets are not breached
+* **WP-CLI commands** — `wp aftercare pull`, `wp aftercare check`, `wp aftercare status`, `wp aftercare run` and `wp aftercare lab` for scripted setups and real server crons
 * **Weekly digest email** — vitals status, changes made and incidents from the past 7 days (opt-out in settings)
 * **Guided first run** — a three-step setup pointer until first data arrives, and suggested privacy-policy text for the RUM beacon
 
@@ -65,6 +75,8 @@ Aftercare does not phone home. CrUX data is fetched directly from Google's API u
 Aftercare connects to the following external services. No connection is made until you configure it.
 
 **Chrome UX Report API (Google)** — used to retrieve real-user Core Web Vitals field data for the URLs you choose to track. Once you enter your own Google API key, the plugin sends your tracked URLs (or your site's origin) together with that API key to `https://chromeuxreport.googleapis.com` once per day per URL. No visitor data, personal data or site content is sent. This service is provided by Google: [Terms of Service](https://developers.google.com/terms), [Privacy Policy](https://policies.google.com/privacy). If no API key is configured, no request is ever made.
+
+**PageSpeed Insights API (Google)**: used for the daily Lighthouse lab checks. When lab checks are enabled and a Google API key is configured, the plugin sends the homepage and up to 5 tracked URLs together with that API key to `https://www.googleapis.com/pagespeedonline/v5/runPagespeed`, 3 times per URL per day, plus at most 4 re-tests a day after plugin, theme or core changes. Google then loads those public pages from its own servers. No visitor data or personal data is sent. This service is provided by Google: [Terms of Service](https://developers.google.com/terms), [Privacy Policy](https://policies.google.com/privacy). Lab checks can be turned off in Settings, and no request is made without an API key.
 
 == Installation ==
 
