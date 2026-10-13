@@ -132,6 +132,7 @@ final class LabClient {
 		foreach ( $values as $metric => $readings ) {
 			$this->samples->insert( $url, $metric, Util::percentile( $readings, 50.0 ), SampleRepository::SOURCE_LAB, $now );
 		}
+		( new BreachDetector( $this->samples ) )->run_lab( $url );
 		Status::flush_cache();
 	}
 

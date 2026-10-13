@@ -29,6 +29,7 @@ It is built for agencies and freelancers who maintain client sites on monthly ca
 
 * Editable budgets per metric (defaults: LCP 2.5 s, INP 200 ms, CLS 0.1, TTFB 800 ms)
 * A daily p75 over budget — or 20% worse than your 28-day baseline — opens an incident and emails you
+* A lab reading 20% worse than the 28-day lab baseline, and worse by more than normal Lighthouse variation, opens a separate lab incident the same day it is measured
 * Incidents track status (open, acknowledged, resolved, dismissed) and resolve automatically when the metric recovers
 * Every incident shows the raw change timeline from the 72 hours before the breach
 

@@ -15,26 +15,50 @@ final class Repository {
 
 	public const STATUSES = array( 'open', 'acknowledged', 'resolved', 'dismissed' );
 
+	/** Incident raised from field data (Chrome UX Report or real-user beacons). */
+	public const SOURCE_FIELD = 'field';
+
+	/**
+	 * Incident raised from Lighthouse lab checks. Tracked apart from field
+	 * incidents so a recovery in one never resolves the other.
+	 */
+	public const SOURCE_LAB = 'lab';
+
+	/**
+	 * Metric name for display: "LCP", or "LCP (lab)" for a lab incident.
+	 *
+	 * @param array<string, mixed> $incident
+	 */
+	public static function label( array $incident ): string {
+		$metric = (string) ( $incident['metric'] ?? '' );
+		if ( self::SOURCE_LAB === ( $incident['sample_source'] ?? '' ) ) {
+			/* translators: %s: metric name such as LCP */
+			return sprintf( __( '%s (lab)', 'aftercare' ), $metric );
+		}
+		return $metric;
+	}
+
 	private function table(): string {
 		global $wpdb;
 		return $wpdb->prefix . 'aftercare_incidents';
 	}
 
-	public function open( string $url, string $metric, ?float $baseline, float $breach, float $budget ): int {
+	public function open( string $url, string $metric, ?float $baseline, float $breach, float $budget, string $source = self::SOURCE_FIELD ): int {
 		global $wpdb;
 		$wpdb->insert(
 			$this->table(),
 			array(
-				'metric'       => $metric,
-				'url_hash'     => Util::url_hash( $url ),
-				'url'          => $url,
-				'baseline_p75' => $baseline,
-				'breach_p75'   => $breach,
-				'budget_value' => $budget,
-				'status'       => 'open',
-				'opened_at'    => Util::now(),
+				'metric'        => $metric,
+				'url_hash'      => Util::url_hash( $url ),
+				'url'           => $url,
+				'baseline_p75'  => $baseline,
+				'breach_p75'    => $breach,
+				'budget_value'  => $budget,
+				'status'        => 'open',
+				'opened_at'     => Util::now(),
+				'sample_source' => $source,
 			),
-			array( '%s', '%s', '%s', '%f', '%f', '%f', '%s', '%s' )
+			array( '%s', '%s', '%s', '%f', '%f', '%f', '%s', '%s', '%s' )
 		);
 		return (int) $wpdb->insert_id;
 	}
@@ -52,17 +76,18 @@ final class Repository {
 	}
 
 	/**
-	 * Open or acknowledged incident for a URL+metric pair, if any.
+	 * Open or acknowledged incident for a URL, metric and source, if any.
 	 *
 	 * @return array<string, mixed>|null
 	 */
-	public function find_open( string $url, string $metric ): ?array {
+	public function find_open( string $url, string $metric, string $source = self::SOURCE_FIELD ): ?array {
 		global $wpdb;
 		$row = $wpdb->get_row(
 			$wpdb->prepare(
-				"SELECT * FROM {$this->table()} WHERE url_hash = %s AND metric = %s AND status IN ('open','acknowledged') ORDER BY opened_at DESC LIMIT 1", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				"SELECT * FROM {$this->table()} WHERE url_hash = %s AND metric = %s AND sample_source = %s AND status IN ('open','acknowledged') ORDER BY opened_at DESC LIMIT 1", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 				Util::url_hash( $url ),
-				$metric
+				$metric,
+				$source
 			),
 			ARRAY_A
 		);

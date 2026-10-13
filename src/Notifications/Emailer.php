@@ -33,7 +33,7 @@ final class Emailer {
 			/* translators: 1: site name, 2: metric */
 			__( '[%1$s] Performance regression detected: %2$s', 'aftercare' ),
 			wp_specialchars_decode( get_bloginfo( 'name' ), ENT_QUOTES ),
-			(string) $incident['metric']
+			\Aftercare\Incidents\Repository::label( $incident )
 		);
 
 		ob_start();

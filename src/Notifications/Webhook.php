@@ -42,6 +42,7 @@ final class Webhook {
 						'incident' => array(
 							'id'           => (int) $incident['id'],
 							'metric'       => (string) $incident['metric'],
+							'source'       => (string) ( $incident['sample_source'] ?? 'field' ),
 							'url'          => (string) $incident['url'],
 							'baseline_p75' => null !== $incident['baseline_p75'] ? (float) $incident['baseline_p75'] : null,
 							'breach_p75'   => (float) $incident['breach_p75'],

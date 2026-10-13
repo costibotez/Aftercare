@@ -50,7 +50,7 @@ final class IncidentsPage {
 		foreach ( $incidents as $incident ) {
 			$metric = (string) $incident['metric'];
 			echo '<tr>';
-			echo '<td><strong>' . esc_html( $metric ) . '</strong></td>';
+			echo '<td><strong>' . esc_html( IncidentRepository::label( $incident ) ) . '</strong></td>';
 			echo '<td class="aftercare-cell-url">' . esc_html( (string) $incident['url'] ) . '</td>';
 			echo '<td class="aftercare-fail">' . esc_html( Util::format_metric( $metric, (float) $incident['breach_p75'] ) ) . '</td>';
 			echo '<td>' . esc_html( Util::format_metric( $metric, (float) $incident['budget_value'] ) ) . '</td>';
@@ -79,21 +79,28 @@ final class IncidentsPage {
 
 		$metric = (string) $incident['metric'];
 		$url    = (string) $incident['url'];
+		$is_lab = IncidentRepository::SOURCE_LAB === ( $incident['sample_source'] ?? '' );
 
 		echo '<p><a href="' . esc_url( admin_url( 'admin.php?page=aftercare-incidents' ) ) . '">&larr; ' . esc_html__( 'All incidents', 'aftercare' ) . '</a></p>';
 
 		echo '<div class="aftercare-panel">';
-		echo '<h2>' . esc_html( $metric ) . ' — ' . esc_html( $url ) . ' ' . self::status_pill( (string) $incident['status'] ) . '</h2>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		echo '<h2>' . esc_html( IncidentRepository::label( $incident ) ) . ' — ' . esc_html( $url ) . ' ' . self::status_pill( (string) $incident['status'] ) . '</h2>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 
 		echo '<div class="aftercare-incident-stats">';
-		echo '<div><span class="aftercare-stat-label">' . esc_html__( 'Breach p75', 'aftercare' ) . '</span><span class="aftercare-stat aftercare-fail">' . esc_html( Util::format_metric( $metric, (float) $incident['breach_p75'] ) ) . '</span></div>';
+		echo '<div><span class="aftercare-stat-label">' . ( $is_lab ? esc_html__( 'Lab reading', 'aftercare' ) : esc_html__( 'Breach p75', 'aftercare' ) ) . '</span><span class="aftercare-stat aftercare-fail">' . esc_html( Util::format_metric( $metric, (float) $incident['breach_p75'] ) ) . '</span></div>';
 		echo '<div><span class="aftercare-stat-label">' . esc_html__( 'Budget', 'aftercare' ) . '</span><span class="aftercare-stat">' . esc_html( Util::format_metric( $metric, (float) $incident['budget_value'] ) ) . '</span></div>';
 		echo '<div><span class="aftercare-stat-label">' . esc_html__( '28-day baseline', 'aftercare' ) . '</span><span class="aftercare-stat">' . ( null !== $incident['baseline_p75'] ? esc_html( Util::format_metric( $metric, (float) $incident['baseline_p75'] ) ) : '&mdash;' ) . '</span></div>';
 		echo '<div><span class="aftercare-stat-label">' . esc_html__( 'Opened', 'aftercare' ) . '</span><span class="aftercare-stat">' . esc_html( (string) $incident['opened_at'] ) . ' UTC</span></div>';
 		echo '</div>';
 
-		// 60-day trend with the breach visible.
-		$series = ( new SampleRepository() )->series( $url, $metric, 60 );
+		if ( $is_lab ) {
+			echo '<p class="aftercare-subtle">' . esc_html__( 'Opened by a Lighthouse lab check: the reading was more than 20% worse than the 28-day lab baseline, by more than normal run-to-run variation. Lab incidents never open from the budget alone.', 'aftercare' ) . '</p>';
+		}
+
+		// 60-day trend with the breach visible, drawn from the same kind of
+		// data that opened the incident.
+		$samples = new SampleRepository();
+		$series  = $is_lab ? $samples->lab_series( $url, $metric, 60 ) : $samples->series( $url, $metric, 60 );
 		echo '<div class="aftercare-sparkline aftercare-sparkline-large" data-sparkline="' . esc_attr( (string) wp_json_encode( array_column( $series, 'value' ) ) ) . '" data-budget="' . esc_attr( (string) $incident['budget_value'] ) . '"></div>';
 
 		// Status actions.

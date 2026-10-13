@@ -138,15 +138,16 @@ switch ( $step ) {
 		// Lab check: a mocked PageSpeed Insights response is stored as lab
 		// samples and never leaks into the field readings.
 		$psi_calls = 0;
+		$psi_lcp   = 3000;
 		add_filter(
 			'pre_http_request',
-			static function ( $pre, $args, $request_url ) use ( &$psi_calls ) {
+			static function ( $pre, $args, $request_url ) use ( &$psi_calls, &$psi_lcp ) {
 				if ( ! str_contains( $request_url, 'pagespeedonline' ) ) {
 					return $pre;
 				}
 				++$psi_calls;
 				$audits = array(
-					'largest-contentful-paint' => array( 'numericValue' => 3000 + 100 * $psi_calls ),
+					'largest-contentful-paint' => array( 'numericValue' => $psi_lcp + 100 * ( ( $psi_calls - 1 ) % 3 ) ),
 					'cumulative-layout-shift'  => array( 'numericValue' => 0.02 ),
 					'server-response-time'     => array( 'numericValue' => 350 ),
 					'total-blocking-time'      => array( 'numericValue' => 180 ),
@@ -165,16 +166,37 @@ switch ( $step ) {
 			3
 		);
 		Aftercare\Core\Options::update( array( 'api_key' => 'compat-test-key' ) );
+
+		// A steady lab history: the LCP reading below regresses well past the
+		// noise floor, while CLS doubles but by less than the minimum change.
+		for ( $day = 1; $day <= 8; $day++ ) {
+			$plugin->samples()->insert( $url, 'LCP', 2000, 'lab', Aftercare\Core\Util::days_ago( $day ) . ' 07:00:00' );
+			$plugin->samples()->insert( $url, 'CLS', 0.01, 'lab', Aftercare\Core\Util::days_ago( $day ) . ' 07:00:00' );
+		}
+		$open_before = $plugin->incidents()->count_open();
+		$mail_before = count( $mails );
 		$lab = new Aftercare\Vitals\LabClient( $plugin->samples() );
 		$lab->queue_daily();
 		check( in_array( Aftercare\Vitals\LabClient::URL_HOOK, aftercare_cron_hooks(), true ), 'lab check queued' );
 		$lab->run_url( $url );
 		check( 3 === $psi_calls, 'lab check takes three runs' );
 		$lab_lcp = $plugin->samples()->lab_series( $url, 'LCP', 1 );
-		check( 1 === count( $lab_lcp ) && 3200.0 === (float) end( $lab_lcp )['value'], 'lab check stores the median LCP' );
+		check( 3100.0 === (float) end( $lab_lcp )['value'], 'lab check stores the median LCP' );
 		check( 1 === count( $plugin->samples()->lab_series( $url, 'TBT', 1 ) ), 'lab check stores TBT' );
 		$field = $plugin->samples()->latest_for_day( $url, 'LCP', gmdate( 'Y-m-d' ) );
 		check( null === $field || 'lab' !== $field['source'], 'lab samples stay out of field readings' );
+
+		$lab_open = $plugin->incidents()->find_open( $url, 'LCP', 'lab' );
+		check( null !== $lab_open, 'lab regression opens a lab incident' );
+		check( null !== $plugin->incidents()->find_open( $url, 'LCP' ), 'field incident stays open alongside it' );
+		check( null === $plugin->incidents()->find_open( $url, 'CLS', 'lab' ), 'lab change below the noise floor opens nothing' );
+		check( $open_before + 1 === $plugin->incidents()->count_open(), 'exactly one lab incident opens' );
+		check( (bool) preg_grep( '/LCP \(lab\)/', array_slice( $mails, $mail_before ) ), 'lab incident alert email sent' );
+
+		$psi_lcp = 1900;
+		$lab->run_url( $url );
+		check( null === $plugin->incidents()->find_open( $url, 'LCP', 'lab' ), 'lab recovery resolves the lab incident' );
+		check( null !== $plugin->incidents()->find_open( $url, 'LCP' ), 'lab recovery leaves the field incident open' );
 		Aftercare\Core\Options::update( array( 'api_key' => '' ) );
 		break;
 

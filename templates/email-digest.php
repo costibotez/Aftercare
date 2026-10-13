@@ -79,7 +79,7 @@ $aftercare_total_changes = array_sum( (array) $aftercare_digest['ledger_counts']
 			<ul style="padding-left:18px;">
 				<?php foreach ( (array) $aftercare_digest['incidents'] as $aftercare_incident ) : ?>
 					<li style="margin-bottom:6px;">
-						<strong><?php echo esc_html( (string) $aftercare_incident['metric'] ); ?></strong>
+						<strong><?php echo esc_html( \Aftercare\Incidents\Repository::label( $aftercare_incident ) ); ?></strong>
 						— <?php echo esc_html( Util::format_metric( (string) $aftercare_incident['metric'], (float) $aftercare_incident['breach_p75'] ) ); ?>
 						<span style="color:#6b7280;">(<?php echo esc_html( (string) $aftercare_incident['status'] ); ?>)</span>
 					</li>

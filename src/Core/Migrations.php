@@ -10,7 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 final class Migrations {
 
-	public const SCHEMA_VERSION        = '1.1.0';
+	public const SCHEMA_VERSION        = '1.2.0';
 	public const SCHEMA_VERSION_OPTION = 'aftercare_schema_version';
 
 	public static function maybe_upgrade(): void {
@@ -69,6 +69,7 @@ final class Migrations {
 				opened_at DATETIME NOT NULL,
 				resolved_at DATETIME NULL,
 				causes LONGTEXT NULL,
+				sample_source VARCHAR(20) NOT NULL DEFAULT 'field',
 				PRIMARY KEY  (id),
 				KEY status_opened (status, opened_at),
 				KEY url_metric (url_hash, metric)

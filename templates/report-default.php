@@ -132,7 +132,7 @@ $aftercare_incs     = (array) ( $aftercare_stats['incidents'] ?? array() );
 			<tbody>
 			<?php foreach ( $aftercare_incs as $aftercare_incident ) : ?>
 				<tr>
-					<td><?php echo esc_html( (string) $aftercare_incident['metric'] ); ?></td>
+					<td><?php echo esc_html( \Aftercare\Incidents\Repository::label( $aftercare_incident ) ); ?></td>
 					<td><?php echo esc_html( (string) $aftercare_incident['url'] ); ?></td>
 					<td><?php echo esc_html( Util::format_metric( (string) $aftercare_incident['metric'], (float) $aftercare_incident['breach_p75'] ) ); ?></td>
 					<td><?php echo esc_html( ucfirst( (string) $aftercare_incident['status'] ) ); ?></td>

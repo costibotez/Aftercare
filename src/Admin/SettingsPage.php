@@ -67,14 +67,14 @@ final class SettingsPage {
 		echo '</table>';
 
 		echo '<h2>' . esc_html__( 'Performance budgets', 'aftercare' ) . '</h2>';
-		echo '<p class="description">' . esc_html__( 'A daily p75 above budget, or 20% worse than the 28-day baseline, opens an incident.', 'aftercare' ) . '</p>';
+		echo '<p class="description">' . esc_html__( 'A daily field p75 above budget, or 20% worse than the 28-day baseline, opens an incident. Lab checks open an incident only when a reading is 20% worse than the 28-day lab baseline and the change is larger than normal Lighthouse variation; for lab data the budgets set the status shown on the dashboard.', 'aftercare' ) . '</p>';
 		echo '<table class="form-table" role="presentation">';
 		$budget_fields = array(
 			'LCP'  => array( __( 'LCP budget (ms)', 'aftercare' ), '2500' ),
 			'INP'  => array( __( 'INP budget (ms)', 'aftercare' ), '200' ),
 			'CLS'  => array( __( 'CLS budget (score)', 'aftercare' ), '0.1' ),
 			'TTFB' => array( __( 'TTFB budget (ms)', 'aftercare' ), '800' ),
-			'TBT'  => array( __( 'TBT budget (ms, lab checks only)', 'aftercare' ), '200' ),
+			'TBT'  => array( __( 'TBT budget (ms, lab status only)', 'aftercare' ), '200' ),
 		);
 		foreach ( $budget_fields as $metric => [ $label, $placeholder ] ) {
 			$step = 'CLS' === $metric ? '0.01' : '50';

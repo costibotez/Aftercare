@@ -27,6 +27,8 @@ Both features reuse the ledger, incidents, notifications and attribution pipelin
 
 **Noise control.** Lighthouse varies run to run. Each check takes the median of 3 runs per URL (one run for change-triggered checks on more than 3 URLs, to bound the time cost). A lab regression must exceed both the 20% factor and a minimum absolute delta per metric (LCP 300 ms, TBT 100 ms, CLS 0.05, TTFB 150 ms) before an incident opens.
 
+**Lab budgets (decided in milestone 2).** A throttled mobile Lighthouse run is routinely slower than the field budgets, so lab incidents open only on regression against the lab baseline. For lab data the budgets set the dashboard status, not incidents. Lab and field incidents are kept apart by an `incidents.sample_source` column (`field` or `lab`), so a recovery in one never resolves the other.
+
 **Change-triggered checks.** `Ledger\Listeners` already records the triggering events. After recording one of `plugin_update`, `plugin_activate`, `theme_update`, `theme_switch` or `core_update`, it schedules a single event `aftercare_lab_check` 15 minutes later, passing the ledger event ID. Debounce: if a check is already pending, push it back to 15 minutes after the newest change and append the event ID, so a bulk update of 12 plugins produces one check, not 12.
 
 **Execution.** A PageSpeed Insights call takes 10 to 30 seconds. Each URL runs as its own scheduled action (Action Scheduler when present, `wp_schedule_single_event` otherwise) so no single cron request runs for minutes. Cap: 6 URLs per check, 4 change-triggered checks per day.

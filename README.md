@@ -58,6 +58,7 @@ Every site on a care plan eventually produces the same two conversations: *"the 
 - Editable budgets per metric (defaults: LCP 2.5 s, INP 200 ms, CLS 0.1, TTFB 800 ms)
 - A daily p75 over budget — or 20% worse than the 28-day baseline — opens an **incident** with the breach value, budget and baseline
 - The baseline is built from the same data source as the reading it judges, and stays muted until 7 days of same-source history exist — so the day CrUX switches a thin URL-level record to origin-level, you get silence rather than a regression that never happened
+- Lab checks open their own incidents, labelled "(lab)", when a reading is 20% worse than the 28-day lab baseline **and** worse by more than normal Lighthouse variation (LCP 300 ms, TBT 100 ms, CLS 0.05, TTFB 150 ms). Lab and field incidents are tracked separately, so recovery in one never resolves the other
 - Email alert on every new incident; automatic resolution when the metric recovers
 - Incident detail shows the raw change timeline from the 72 hours before the breach
 
