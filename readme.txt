@@ -100,6 +100,11 @@ Yes. `wp aftercare run` executes the full daily pipeline (CrUX pull, RUM aggrega
 
 == Changelog ==
 
+= 1.0.4 =
+* The change ledger CSV export no longer raises PHP 8.4 deprecation notices
+* The CSV export now follows the standard CSV format, so entries whose details contain a backslash before a quote open correctly in spreadsheet apps
+* Tested with WordPress 7.1.3 and the minimum supported WordPress 6.4
+
 = 1.0.3 =
 * Removed every limit that depended on a licence check: tracked URLs are unlimited, vitals are kept for thirteen months and the change ledger is kept in full
 * Settings fields are never disabled and are always saved. Settings belonging to the separate add-on are shown only when that add-on is installed, instead of being displayed in a locked state
