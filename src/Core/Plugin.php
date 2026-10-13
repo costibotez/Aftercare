@@ -14,6 +14,7 @@ use Aftercare\Notifications\Slack;
 use Aftercare\Notifications\Webhook;
 use Aftercare\Notifications\WeeklyDigest;
 use Aftercare\Vitals\LabClient;
+use Aftercare\Vitals\LabScheduler;
 use Aftercare\Vitals\RumController;
 use Aftercare\Vitals\SampleRepository;
 
@@ -59,6 +60,7 @@ final class Plugin {
 		( new Cron() )->register();
 		( new RumController( new SampleRepository() ) )->register();
 		( new LabClient( new SampleRepository() ) )->register();
+		( new LabScheduler() )->register();
 
 		// Notifications subscribe to incident lifecycle actions.
 		( new Emailer() )->register();

@@ -85,8 +85,10 @@ final class BreachDetector {
 	 * check, so a regression opens an incident the same day it is measured.
 	 * The baseline stops at the start of today: today's readings are what is
 	 * being judged.
+	 *
+	 * @param int[] $trigger_ids Ledger events a change check was re-testing.
 	 */
-	public function run_lab( string $url ): void {
+	public function run_lab( string $url, array $trigger_ids = array() ): void {
 		$today          = gmdate( 'Y-m-d' );
 		$baseline_start = Util::days_ago( 28 );
 
@@ -105,26 +107,28 @@ final class BreachDetector {
 			$regressed = $value > $baseline * self::REGRESSION_FACTOR
 				&& ( $value - $baseline ) >= self::LAB_MIN_DELTA[ $metric ];
 
-			$this->apply( $url, $metric, $value, $baseline, Options::budget( $metric, $url ), $regressed, IncidentRepository::SOURCE_LAB );
+			$this->apply( $url, $metric, $value, $baseline, Options::budget( $metric, $url ), $regressed, IncidentRepository::SOURCE_LAB, $trigger_ids );
 		}
 	}
 
 	/**
 	 * Open an incident for a new breach, or resolve the open one on recovery.
+	 *
+	 * @param int[] $trigger_ids Ledger events a change check was re-testing.
 	 */
-	private function apply( string $url, string $metric, float $value, ?float $baseline, float $budget, bool $breached, string $source ): void {
+	private function apply( string $url, string $metric, float $value, ?float $baseline, float $budget, bool $breached, string $source, array $trigger_ids = array() ): void {
 		$open_incident = $this->incidents->find_open( $url, $metric, $source );
 
 		if ( $breached ) {
 			if ( $open_incident ) {
 				return; // Already tracking this regression.
 			}
-			$incident_id = $this->incidents->open( $url, $metric, $baseline, $value, $budget, $source );
+			$incident_id = $this->incidents->open( $url, $metric, $baseline, $value, $budget, $source, $trigger_ids );
 			if ( $incident_id ) {
 				// The attribution engine ships only in the premium build; the
 				// free build stores no ranked causes.
 				if ( class_exists( Attribution::class ) ) {
-					$causes = ( new Attribution() )->rank( $url, Util::now() );
+					$causes = ( new Attribution() )->rank( $url, Util::now(), $trigger_ids );
 					$this->incidents->set_causes( $incident_id, $causes );
 				}
 

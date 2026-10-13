@@ -30,6 +30,7 @@ It is built for agencies and freelancers who maintain client sites on monthly ca
 * Editable budgets per metric (defaults: LCP 2.5 s, INP 200 ms, CLS 0.1, TTFB 800 ms)
 * A daily p75 over budget — or 20% worse than your 28-day baseline — opens an incident and emails you
 * A lab reading 20% worse than the 28-day lab baseline, and worse by more than normal Lighthouse variation, opens a separate lab incident the same day it is measured
+* **Re-test after every change**: 15 minutes after a plugin or theme update, plugin activation, theme switch or core update, Aftercare runs a lab check again. A bulk update produces one re-test, and an incident it opens names the changes it was re-testing
 * Incidents track status (open, acknowledged, resolved, dismissed) and resolve automatically when the metric recovers
 * Every incident shows the raw change timeline from the 72 hours before the breach
 
@@ -68,7 +69,7 @@ Aftercare connects to the following external services. No connection is made unt
 
 **Chrome UX Report API (Google)** — used to retrieve real-user Core Web Vitals field data for the URLs you choose to track. Once you enter your own Google API key, the plugin sends your tracked URLs (or your site's origin) together with that API key to `https://chromeuxreport.googleapis.com` once per day per URL. No visitor data, personal data or site content is sent. This service is provided by Google: [Terms of Service](https://developers.google.com/terms), [Privacy Policy](https://policies.google.com/privacy). If no API key is configured, no request is ever made.
 
-**PageSpeed Insights API (Google)**: used for the daily Lighthouse lab checks. When lab checks are enabled and a Google API key is configured, the plugin sends the homepage and up to 5 tracked URLs together with that API key to `https://www.googleapis.com/pagespeedonline/v5/runPagespeed`, 3 times per URL per day. Google then loads those public pages from its own servers. No visitor data or personal data is sent. This service is provided by Google: [Terms of Service](https://developers.google.com/terms), [Privacy Policy](https://policies.google.com/privacy). Lab checks can be turned off in Settings, and no request is made without an API key.
+**PageSpeed Insights API (Google)**: used for the daily Lighthouse lab checks. When lab checks are enabled and a Google API key is configured, the plugin sends the homepage and up to 5 tracked URLs together with that API key to `https://www.googleapis.com/pagespeedonline/v5/runPagespeed`, 3 times per URL per day, plus at most 4 re-tests a day after plugin, theme or core changes. Google then loads those public pages from its own servers. No visitor data or personal data is sent. This service is provided by Google: [Terms of Service](https://developers.google.com/terms), [Privacy Policy](https://policies.google.com/privacy). Lab checks can be turned off in Settings, and no request is made without an API key.
 
 == Installation ==
 

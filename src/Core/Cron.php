@@ -7,6 +7,7 @@ use Aftercare\Reports\Builder as ReportBuilder;
 use Aftercare\Vitals\BreachDetector;
 use Aftercare\Vitals\CruxClient;
 use Aftercare\Vitals\LabClient;
+use Aftercare\Vitals\LabScheduler;
 use Aftercare\Vitals\RumController;
 use Aftercare\Vitals\SampleRepository;
 
@@ -61,11 +62,18 @@ final class Cron {
 			wp_clear_scheduled_hook( $hook );
 		}
 
-		// One-off actions carry arguments, so clear them by hook alone.
+		self::unschedule_hook( LabClient::URL_HOOK );
+		self::unschedule_hook( LabScheduler::CHECK_HOOK );
+	}
+
+	/**
+	 * Remove every pending one-off action for a hook, whatever its arguments.
+	 */
+	public static function unschedule_hook( string $hook ): void {
 		if ( self::uses_action_scheduler() ) {
-			as_unschedule_all_actions( LabClient::URL_HOOK );
+			as_unschedule_all_actions( $hook );
 		}
-		wp_unschedule_hook( LabClient::URL_HOOK );
+		wp_unschedule_hook( $hook );
 	}
 
 	/**

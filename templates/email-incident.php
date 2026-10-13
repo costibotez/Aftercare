@@ -16,6 +16,7 @@ $aftercare_metric   = (string) $aftercare_incident['metric'];
 $aftercare_is_lab   = IncidentRepository::SOURCE_LAB === ( $aftercare_incident['sample_source'] ?? '' );
 $aftercare_site     = wp_specialchars_decode( get_bloginfo( 'name' ), ENT_QUOTES );
 $aftercare_detail   = admin_url( 'admin.php?page=aftercare-incidents&incident=' . (int) $aftercare_incident['id'] );
+$aftercare_triggers = ( new \Aftercare\Ledger\Repository() )->find_many( IncidentRepository::trigger_ids( $aftercare_incident ) );
 $aftercare_baseline = null !== $aftercare_incident['baseline_p75']
 	? Util::format_metric( $aftercare_metric, (float) $aftercare_incident['baseline_p75'] )
 	: __( 'n/a', 'aftercare' );
@@ -39,6 +40,17 @@ $aftercare_baseline = null !== $aftercare_incident['baseline_p75']
 			);
 			?>
 		</p>
+		<?php if ( $aftercare_triggers ) : ?>
+			<p style="margin-bottom:4px;"><strong><?php esc_html_e( 'The lab re-test ran after these changes:', 'aftercare' ); ?></strong></p>
+			<ul style="margin-top:0;padding-left:18px;">
+				<?php foreach ( $aftercare_triggers as $aftercare_event ) : ?>
+					<li>
+						<?php echo esc_html( (string) $aftercare_event['summary'] ); ?>
+						<span style="color:#6b7280;">(<?php echo esc_html( (string) $aftercare_event['actor_label'] . ', ' . (string) $aftercare_event['occurred_at'] . ' UTC' ); ?>)</span>
+					</li>
+				<?php endforeach; ?>
+			</ul>
+		<?php endif; ?>
 		<table style="width:100%;border-collapse:collapse;margin:16px 0;" role="presentation">
 			<tr>
 				<td style="padding:8px 12px;background:#fee2e2;border-radius:6px 0 0 6px;">

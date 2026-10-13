@@ -55,6 +55,19 @@ function aftercare_cron_hooks(): array {
 	return $hooks;
 }
 
+/**
+ * Argument lists of every pending WP-Cron event for one hook.
+ */
+function aftercare_cron_args( string $hook ): array {
+	$args = array();
+	foreach ( (array) _get_cron_array() as $events ) {
+		foreach ( (array) ( $events[ $hook ] ?? array() ) as $event ) {
+			$args[] = $event['args'];
+		}
+	}
+	return $args;
+}
+
 if ( 'install' !== $step ) {
 	wp_set_current_user( 1 );
 }
@@ -197,6 +210,36 @@ switch ( $step ) {
 		$lab->run_url( $url );
 		check( null === $plugin->incidents()->find_open( $url, 'LCP', 'lab' ), 'lab recovery resolves the lab incident' );
 		check( null !== $plugin->incidents()->find_open( $url, 'LCP' ), 'lab recovery leaves the field incident open' );
+
+		// Change-triggered re-test: two changes debounce into one check, which
+		// carries both ledger ids into the incident it opens.
+		$scheduler = Aftercare\Vitals\LabScheduler::class;
+		activate_plugin( 'hello.php' );
+		$first_check = wp_next_scheduled( $scheduler::CHECK_HOOK );
+		check( 1 === count( $scheduler::pending() ), 'plugin activation queues a lab re-test' );
+		check( $first_check && $first_check - time() > 10 * MINUTE_IN_SECONDS, 'lab re-test waits for changes to settle' );
+		do_action( '_core_updated_successfully', get_bloginfo( 'version' ) );
+		$triggers = $scheduler::pending();
+		check( 2 === count( $triggers ), 'a second change joins the pending re-test' );
+		check( 1 === count( aftercare_cron_args( $scheduler::CHECK_HOOK ) ), 'changes debounce into one re-test' );
+
+		$psi_lcp = 3000;
+		do_action( $scheduler::CHECK_HOOK );
+		check( array() === $scheduler::pending(), 're-test clears the pending changes' );
+		$retests = array_values( array_filter( aftercare_cron_args( Aftercare\Vitals\LabClient::URL_HOOK ), static fn( $args ) => 3 === count( $args ) ) );
+		check( 1 === count( $retests ) && $triggers === $retests[0][1], 're-test queues the URL with the triggering changes' );
+		$mail_before = count( $mails );
+		do_action_ref_array( Aftercare\Vitals\LabClient::URL_HOOK, $retests[0] );
+		$caught = $plugin->incidents()->find_open( $url, 'LCP', 'lab' );
+		check( null !== $caught && $triggers === Aftercare\Incidents\Repository::trigger_ids( $caught ), 'lab incident records the triggering changes' );
+		check( 1 === count( $mails ) - $mail_before, 'lab re-test incident alert email sent' );
+
+		add_filter( 'aftercare_lab_change_checks_per_day', static fn() => 1 );
+		Aftercare\Vitals\LabScheduler::queue( $triggers[0] );
+		wp_unschedule_hook( Aftercare\Vitals\LabClient::URL_HOOK );
+		do_action( $scheduler::CHECK_HOOK );
+		check( array() === aftercare_cron_args( Aftercare\Vitals\LabClient::URL_HOOK ), 'daily cap stops extra re-tests' );
+		Aftercare\Vitals\LabScheduler::queue( $triggers[0] );
 		Aftercare\Core\Options::update( array( 'api_key' => '' ) );
 		break;
 

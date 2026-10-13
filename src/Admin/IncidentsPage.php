@@ -97,6 +97,16 @@ final class IncidentsPage {
 			echo '<p class="aftercare-subtle">' . esc_html__( 'Opened by a Lighthouse lab check: the reading was more than 20% worse than the 28-day lab baseline, by more than normal run-to-run variation. Lab incidents never open from the budget alone.', 'aftercare' ) . '</p>';
 		}
 
+		$triggers = ( new LedgerRepository() )->find_many( IncidentRepository::trigger_ids( $incident ) );
+		if ( $triggers ) {
+			echo '<p><strong>' . esc_html__( 'Caught by the lab re-test that ran after these changes:', 'aftercare' ) . '</strong></p>';
+			echo '<ul class="aftercare-timeline">';
+			foreach ( $triggers as $event ) {
+				LedgerPage::render_event_row( $event );
+			}
+			echo '</ul>';
+		}
+
 		// 60-day trend with the breach visible, drawn from the same kind of
 		// data that opened the incident.
 		$samples = new SampleRepository();

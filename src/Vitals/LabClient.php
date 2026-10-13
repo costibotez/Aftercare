@@ -40,7 +40,7 @@ final class LabClient {
 	public function __construct( private SampleRepository $samples ) {}
 
 	public function register(): void {
-		add_action( self::URL_HOOK, array( $this, 'run_url' ) );
+		add_action( self::URL_HOOK, array( $this, 'run_url' ), 10, 3 );
 	}
 
 	public static function enabled(): bool {
@@ -82,11 +82,15 @@ final class LabClient {
 	}
 
 	/**
-	 * Scheduled action: test one URL and store the median of each metric.
+	 * Scheduled action: test one URL, store the median of each metric and
+	 * judge it against the lab baseline.
 	 *
-	 * @param string $url URL to test.
+	 * @param string $url         URL to test.
+	 * @param int[]  $trigger_ids Ledger events that prompted a change check;
+	 *                            empty for the daily check.
+	 * @param int    $runs        Runs to take; 0 for the filtered default.
 	 */
-	public function run_url( $url ): void {
+	public function run_url( $url, $trigger_ids = array(), $runs = 0 ): void {
 		$url = esc_url_raw( (string) $url );
 		if ( '' === $url || ! self::enabled() ) {
 			return;
@@ -98,7 +102,8 @@ final class LabClient {
 		 *
 		 * @param int $runs Runs per URL.
 		 */
-		$runs    = max( 1, min( 5, (int) apply_filters( 'aftercare_lab_runs', 3 ) ) );
+		$runs    = (int) $runs > 0 ? (int) $runs : (int) apply_filters( 'aftercare_lab_runs', 3 );
+		$runs    = max( 1, min( 5, $runs ) );
 		$api_key = (string) Options::get( 'api_key' );
 		$values  = array();
 		$error   = '';
@@ -132,7 +137,7 @@ final class LabClient {
 		foreach ( $values as $metric => $readings ) {
 			$this->samples->insert( $url, $metric, Util::percentile( $readings, 50.0 ), SampleRepository::SOURCE_LAB, $now );
 		}
-		( new BreachDetector( $this->samples ) )->run_lab( $url );
+		( new BreachDetector( $this->samples ) )->run_lab( $url, array_map( 'intval', (array) $trigger_ids ) );
 		Status::flush_cache();
 	}
 

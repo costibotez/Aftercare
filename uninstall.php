@@ -29,6 +29,8 @@ delete_option( 'aftercare_plugin_versions' );
 delete_option( 'aftercare_rum_buffer' );
 delete_option( 'aftercare_onboarding_dismissed' );
 delete_option( 'aftercare_lab_last_error' );
+delete_option( 'aftercare_lab_pending' );
+delete_option( 'aftercare_lab_change_count' );
 
 // Transients (CrUX caches).
 $wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE '\\_transient\\_aftercare\\_%' OR option_name LIKE '\\_transient\\_timeout\\_aftercare\\_%'" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery
@@ -36,3 +38,4 @@ $wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE '\\_transient
 wp_clear_scheduled_hook( 'aftercare_daily_tasks' );
 wp_clear_scheduled_hook( 'aftercare_weekly_digest' );
 wp_unschedule_hook( 'aftercare_lab_url' );
+wp_unschedule_hook( 'aftercare_lab_change_check' );

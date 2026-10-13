@@ -25,6 +25,18 @@ final class Repository {
 	public const SOURCE_LAB = 'lab';
 
 	/**
+	 * Ledger ids of the changes a lab check was re-testing when it caught the
+	 * incident. Empty for field incidents and daily lab checks.
+	 *
+	 * @param array<string, mixed> $incident
+	 * @return int[]
+	 */
+	public static function trigger_ids( array $incident ): array {
+		$ids = json_decode( (string) ( $incident['trigger_event_ids'] ?? '' ), true );
+		return is_array( $ids ) ? array_values( array_filter( array_map( 'intval', $ids ) ) ) : array();
+	}
+
+	/**
 	 * Metric name for display: "LCP", or "LCP (lab)" for a lab incident.
 	 *
 	 * @param array<string, mixed> $incident
@@ -43,22 +55,27 @@ final class Repository {
 		return $wpdb->prefix . 'aftercare_incidents';
 	}
 
-	public function open( string $url, string $metric, ?float $baseline, float $breach, float $budget, string $source = self::SOURCE_FIELD ): int {
+	/**
+	 * @param int[] $trigger_ids Ledger events that prompted the lab check
+	 *                           which caught this regression.
+	 */
+	public function open( string $url, string $metric, ?float $baseline, float $breach, float $budget, string $source = self::SOURCE_FIELD, array $trigger_ids = array() ): int {
 		global $wpdb;
 		$wpdb->insert(
 			$this->table(),
 			array(
-				'metric'        => $metric,
-				'url_hash'      => Util::url_hash( $url ),
-				'url'           => $url,
-				'baseline_p75'  => $baseline,
-				'breach_p75'    => $breach,
-				'budget_value'  => $budget,
-				'status'        => 'open',
-				'opened_at'     => Util::now(),
-				'sample_source' => $source,
+				'metric'            => $metric,
+				'url_hash'          => Util::url_hash( $url ),
+				'url'               => $url,
+				'baseline_p75'      => $baseline,
+				'breach_p75'        => $breach,
+				'budget_value'      => $budget,
+				'status'            => 'open',
+				'opened_at'         => Util::now(),
+				'sample_source'     => $source,
+				'trigger_event_ids' => $trigger_ids ? wp_json_encode( array_values( array_map( 'intval', $trigger_ids ) ) ) : null,
 			),
-			array( '%s', '%s', '%s', '%f', '%f', '%f', '%s', '%s', '%s' )
+			array( '%s', '%s', '%s', '%f', '%f', '%f', '%s', '%s', '%s', '%s' )
 		);
 		return (int) $wpdb->insert_id;
 	}

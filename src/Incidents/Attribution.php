@@ -17,6 +17,13 @@ final class Attribution {
 	private const WINDOW_HOURS = 72;
 
 	/**
+	 * Score for a change a lab check was re-testing when it caught the
+	 * regression. The timing is direct evidence: the site was measured just
+	 * after this change and found worse.
+	 */
+	private const TRIGGER_SCORE = 95;
+
+	/**
 	 * Plugin-name keywords that mark a performance-relevant category.
 	 */
 	private const PERF_CATEGORIES = array(
@@ -30,17 +37,19 @@ final class Attribution {
 	/**
 	 * Rank candidate causes for an incident.
 	 *
-	 * @param string $url       Affected URL.
-	 * @param string $breach_at GMT datetime of the first bad sample.
+	 * @param string $url         Affected URL.
+	 * @param string $breach_at   GMT datetime of the first bad sample.
+	 * @param int[]  $trigger_ids Ledger events a lab change check was
+	 *                            re-testing when it caught the regression.
 	 * @return array<int, array{label: string, confidence: string, score: int, event_id?: int, event_type?: string, occurred_at?: string}>
 	 */
-	public function rank( string $url, string $breach_at ): array {
+	public function rank( string $url, string $breach_at, array $trigger_ids = array() ): array {
 		$from   = gmdate( 'Y-m-d H:i:s', strtotime( $breach_at . ' UTC' ) - self::WINDOW_HOURS * HOUR_IN_SECONDS );
 		$events = ( new LedgerRepository() )->in_window( $from, $breach_at );
 
 		$causes = array();
 		foreach ( $events as $event ) {
-			$score = $this->score( $event, $url );
+			$score = in_array( (int) $event['id'], $trigger_ids, true ) ? self::TRIGGER_SCORE : $this->score( $event, $url );
 			if ( $score <= 0 ) {
 				continue;
 			}

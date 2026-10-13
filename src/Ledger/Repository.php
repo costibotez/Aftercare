@@ -32,12 +32,13 @@ final class Repository {
 
 	/**
 	 * @param array<string, mixed> $payload
+	 * @return int New event id, or 0 when nothing was recorded.
 	 */
-	public function record( string $event_type, string $summary, array $payload = array() ): void {
+	public function record( string $event_type, string $summary, array $payload = array() ): int {
 		global $wpdb;
 
 		if ( ! in_array( $event_type, self::EVENT_TYPES, true ) ) {
-			return;
+			return 0;
 		}
 
 		$user        = wp_get_current_user();
@@ -56,6 +57,18 @@ final class Repository {
 			),
 			array( '%s', '%s', '%d', '%s', '%s', '%s' )
 		);
+
+		$event_id = (int) $wpdb->insert_id;
+		if ( $event_id ) {
+			/**
+			 * Fires after a change is written to the ledger.
+			 *
+			 * @param int    $event_id   Ledger event id.
+			 * @param string $event_type Event type, one of EVENT_TYPES.
+			 */
+			do_action( 'aftercare_ledger_recorded', $event_id, $event_type );
+		}
+		return $event_id;
 	}
 
 	/**
@@ -127,6 +140,29 @@ final class Repository {
 				"SELECT * FROM {$this->table()} WHERE occurred_at >= %s AND occurred_at <= %s ORDER BY occurred_at DESC", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 				$from_gmt,
 				$to_gmt
+			),
+			ARRAY_A
+		);
+		return $rows ?: array();
+	}
+
+	/**
+	 * Events by id, newest first. Ids that no longer exist are skipped.
+	 *
+	 * @param int[] $ids
+	 * @return array<int, array<string, mixed>>
+	 */
+	public function find_many( array $ids ): array {
+		global $wpdb;
+		$ids = array_values( array_filter( array_map( 'intval', $ids ) ) );
+		if ( empty( $ids ) ) {
+			return array();
+		}
+		$placeholders = implode( ', ', array_fill( 0, count( $ids ), '%d' ) );
+		$rows         = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT * FROM {$this->table()} WHERE id IN ( {$placeholders} ) ORDER BY occurred_at DESC, id DESC", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- table name from $wpdb->prefix; one %d placeholder per id.
+				...$ids
 			),
 			ARRAY_A
 		);

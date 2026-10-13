@@ -59,6 +59,7 @@ Every site on a care plan eventually produces the same two conversations: *"the 
 - A daily p75 over budget — or 20% worse than the 28-day baseline — opens an **incident** with the breach value, budget and baseline
 - The baseline is built from the same data source as the reading it judges, and stays muted until 7 days of same-source history exist — so the day CrUX switches a thin URL-level record to origin-level, you get silence rather than a regression that never happened
 - Lab checks open their own incidents, labelled "(lab)", when a reading is 20% worse than the 28-day lab baseline **and** worse by more than normal Lighthouse variation (LCP 300 ms, TBT 100 ms, CLS 0.05, TTFB 150 ms). Lab and field incidents are tracked separately, so recovery in one never resolves the other
+- **Re-test after every change**: 15 minutes after a plugin or theme update, plugin activation, theme switch or core update, a lab check runs again (debounced, so a bulk update of 12 plugins is one re-test; at most 4 a day). A regression it catches opens an incident the same day, listing the exact changes that preceded it, and Pro attribution ranks those changes first
 - Email alert on every new incident; automatic resolution when the metric recovers
 - Incident detail shows the raw change timeline from the 72 hours before the breach
 
@@ -145,6 +146,9 @@ Useful hooks:
 | `aftercare_is_pro` | filter | Unlock Pro features (development / service installs) |
 | `aftercare_attribution_causes` | filter | Adjust ranked causes for an incident |
 | `aftercare_pdf_engine` | filter | Plug in a PDF engine (e.g. dompdf) for reports |
+| `aftercare_ledger_recorded` | action | A change was written to the ledger (receives the event id and type) |
+| `aftercare_lab_max_urls` / `aftercare_lab_runs` | filter | URLs per lab check (default 6) and Lighthouse runs per URL (default 3) |
+| `aftercare_lab_change_checks_per_day` | filter | Cap on lab re-tests after changes (default 4 a day) |
 
 QA shortcut: **Dashboard → Run daily checks now** runs the full daily pipeline (CrUX pull → RUM aggregation → breach detection → retention) on demand. Lower a budget below the current value and run it to force an incident and the alert email.
 

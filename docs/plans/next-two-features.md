@@ -44,7 +44,7 @@ Both features reuse the ledger, incidents, notifications and attribution pipelin
 | `src/Vitals/SampleRepository.php` | Add `SOURCE_LAB`; extend `SOURCE_PRIORITY` and the literal `FIELD()` placeholder runs plus `assert_source_counts()`; field sources stay ahead of lab |
 | `src/Vitals/BreachDetector.php` | Source-specific evaluation, absolute minimum deltas for lab |
 | `src/Core/Options.php` | `lab_enabled` (default on when an API key exists), `lab_on_change` (default on), `TBT` budget (200 ms); a `LAB_METRICS` list next to `METRICS` |
-| `src/Core/Migrations.php` | Schema 1.2.0: `incidents.trigger_event_ids` and `incidents.sample_source` |
+| `src/Core/Migrations.php` | Schema 1.2.0: `incidents.sample_source` (milestone 2); schema 1.2.1: `incidents.trigger_event_ids` (milestone 3) |
 | `src/Core/Cron.php` | Daily pipeline step "lab check" after the Chrome UX Report pull |
 | `src/Ledger/Listeners.php` | Call `LabScheduler::queue( $event_id )` after the five trigger event types |
 | `src/Incidents/Attribution.php` (Pro) | Boost events listed in `trigger_event_ids` |
