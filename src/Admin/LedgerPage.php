@@ -156,7 +156,10 @@ final class LedgerPage {
 		header( 'Content-Disposition: attachment; filename=aftercare-ledger-' . gmdate( 'Y-m-d' ) . '.csv' );
 
 		$out = fopen( 'php://output', 'w' );
-		fputcsv( $out, array( 'occurred_at', 'event_type', 'summary', 'actor', 'payload' ) );
+		// An empty escape character gives RFC 4180 output (quotes are only
+		// ever doubled), which JSON payloads containing \" need. PHP 8.4
+		// also deprecates leaving the argument out.
+		fputcsv( $out, array( 'occurred_at', 'event_type', 'summary', 'actor', 'payload' ), ',', '"', '' );
 		foreach ( $events as $event ) {
 			fputcsv(
 				$out,
@@ -166,7 +169,10 @@ final class LedgerPage {
 					$event['summary'],
 					$event['actor_label'],
 					$event['payload'],
-				)
+				),
+				',',
+				'"',
+				''
 			);
 		}
 		fclose( $out ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose

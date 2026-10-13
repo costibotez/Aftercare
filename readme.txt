@@ -4,7 +4,7 @@ Tags: core web vitals, performance, monitoring, activity log, client reports
 Requires at least: 6.4
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.0.3
+Stable tag: 1.0.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -100,6 +100,11 @@ Yes. `wp aftercare run` executes the full daily pipeline (CrUX pull, RUM aggrega
 
 == Changelog ==
 
+= 1.0.4 =
+* The change ledger CSV export no longer raises PHP 8.4 deprecation notices
+* The CSV export now follows the standard CSV format, so entries whose details contain a backslash before a quote open correctly in spreadsheet apps
+* Tested with WordPress 7.1.3 and the minimum supported WordPress 6.4
+
 = 1.0.3 =
 * Removed every limit that depended on a licence check: tracked URLs are unlimited, vitals are kept for thirteen months and the change ledger is kept in full
 * Settings fields are never disabled and are always saved. Settings belonging to the separate add-on are shown only when that add-on is installed, instead of being displayed in a locked state
@@ -128,6 +133,9 @@ Yes. `wp aftercare run` executes the full daily pipeline (CrUX pull, RUM aggrega
 * Pro: cause attribution, white-label client reports, Slack/webhooks, extended retention
 
 == Upgrade Notice ==
+
+= 1.0.4 =
+Fixes PHP 8.4 notices and malformed rows in the change ledger CSV export. No changes to stored data or settings.
 
 = 1.0.3 =
 Tracked URL and history limits are gone. Existing data and settings are untouched, and retention now keeps more than before rather than less.

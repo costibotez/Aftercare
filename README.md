@@ -17,7 +17,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/WordPress-6.4%2B-21759b?logo=wordpress&logoColor=white" alt="WordPress 6.4+" />
   <img src="https://img.shields.io/badge/PHP-8.1%2B-777bb4?logo=php&logoColor=white" alt="PHP 8.1+" />
-  <img src="https://img.shields.io/badge/Version-1.0.3-d97706" alt="Version 1.0.3" />
+  <img src="https://img.shields.io/badge/Version-1.0.4-d97706" alt="Version 1.0.4" />
   <img src="https://img.shields.io/badge/License-GPL--2.0--or--later-0f766e" alt="License GPL-2.0-or-later" />
 </p>
 
@@ -148,7 +148,7 @@ QA shortcut: **Dashboard → Run daily checks now** runs the full daily pipeline
 
 ## Releasing to WordPress.org
 
-The GitHub workflow validates the free build on pull requests and pushes to `main`. Pushing a plain version tag such as `1.0.3` publishes that package to SVN `trunk/` and `tags/1.0.3/`, and the PNGs in `.wordpress-org/` to SVN `assets/`. It uses the same ZIP build as local releases; premium code, licensing, translations and repository tooling are excluded. Screenshot HTML sources stay in GitHub.
+The GitHub workflow validates the free build on pull requests and pushes to `main`. Pushing a plain version tag such as `1.0.4` publishes that package to SVN `trunk/` and `tags/1.0.4/`, and the PNGs in `.wordpress-org/` to SVN `assets/`. It uses the same ZIP build as local releases; premium code, licensing, translations and repository tooling are excluded. Screenshot HTML sources stay in GitHub.
 
 One-time setup:
 
@@ -165,11 +165,11 @@ bash bin/build-zip.sh
 After committing and pushing the release changes to `main`, publish (substitute the new version for later releases):
 
 ```bash
-git tag -a 1.0.3 -m "Release 1.0.3"
-git push origin 1.0.3
+git tag -a 1.0.4 -m "Release 1.0.4"
+git push origin 1.0.4
 ```
 
-Watch the **WordPress.org release** workflow in GitHub Actions. The tag must match the plugin header and stable tag; use `1.0.3`, without a `v` prefix. Pushing the tag is the publication step. Published versions are immutable: use a new version for code changes. Readme and directory image changes are included with the next release.
+Watch the **WordPress.org release** workflow in GitHub Actions. The tag must match the plugin header and stable tag; use `1.0.4`, without a `v` prefix. Pushing the tag is the publication step. Published versions are immutable: use a new version for code changes. Readme and directory image changes are included with the next release.
 
 ## License
 
