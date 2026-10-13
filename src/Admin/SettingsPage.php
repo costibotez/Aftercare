@@ -66,6 +66,18 @@ final class SettingsPage {
 
 		echo '</table>';
 
+		echo '<h2>' . esc_html__( 'Error watch', 'aftercare' ) . '</h2>';
+		echo '<table class="form-table" role="presentation">';
+		echo '<tr><th scope="row">' . esc_html__( 'PHP fatal errors', 'aftercare' ) . '</th><td>';
+		echo '<label><input type="checkbox" name="error_watch" value="1" ' . checked( (bool) $options['error_watch'], true, false ) . ' /> ' . esc_html__( 'Record PHP fatal errors in the ledger and open an incident when a new one appears', 'aftercare' ) . '</label>';
+		echo '<p class="description">' . esc_html__( 'Stored on this site only: the file, line and first line of the message, without server paths, request data or visitor details. An error that stops for 24 hours resolves its incident.', 'aftercare' ) . '</p>';
+		echo '</td></tr>';
+		echo '<tr><th scope="row">' . esc_html__( 'Availability', 'aftercare' ) . '</th><td>';
+		echo '<label><input type="checkbox" name="availability_watch" value="1" ' . checked( (bool) $options['availability_watch'], true, false ) . ' /> ' . esc_html__( 'Request the homepage and tracked URLs every hour and 15 minutes after each update, and open an incident when one fails twice in a row', 'aftercare' ) . '</label>';
+		echo '<p class="description">' . esc_html__( 'A failure is a server error, a missing page or a page cut off before it finished rendering. The check runs on this site, so it cannot notice the whole server being down; use an external uptime monitor for that.', 'aftercare' ) . '</p>';
+		echo '</td></tr>';
+		echo '</table>';
+
 		echo '<h2>' . esc_html__( 'Performance budgets', 'aftercare' ) . '</h2>';
 		echo '<p class="description">' . esc_html__( 'A daily field p75 above budget, or 20% worse than the 28-day baseline, opens an incident. Lab checks open an incident only when a reading is 20% worse than the 28-day lab baseline and the change is larger than normal Lighthouse variation; for lab data the budgets set the status shown on the dashboard.', 'aftercare' ) . '</p>';
 		echo '<table class="form-table" role="presentation">';
@@ -181,6 +193,8 @@ final class SettingsPage {
 			'budgets'                => $budgets,
 			'rum_enabled'            => ! empty( $_POST['rum_enabled'] ),
 			'lab_enabled'            => ! empty( $_POST['lab_enabled'] ),
+			'error_watch'            => ! empty( $_POST['error_watch'] ),
+			'availability_watch'     => ! empty( $_POST['availability_watch'] ),
 			'rum_sample_rate'        => isset( $_POST['rum_sample_rate'] ) ? max( 1, min( 100, absint( wp_unslash( $_POST['rum_sample_rate'] ) ) ) ) : 10,
 			'alert_email'            => sanitize_email( wp_unslash( $_POST['alert_email'] ?? '' ) ),
 			'weekly_digest'          => ! empty( $_POST['weekly_digest'] ),

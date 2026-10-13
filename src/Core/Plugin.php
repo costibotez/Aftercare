@@ -6,6 +6,7 @@ use Aftercare\Admin\DashboardWidget;
 use Aftercare\Admin\Menu;
 use Aftercare\Admin\Onboarding;
 use Aftercare\Admin\SiteHealth;
+use Aftercare\Errors\AvailabilityCheck;
 use Aftercare\Incidents\Repository as IncidentRepository;
 use Aftercare\Ledger\Listeners;
 use Aftercare\Ledger\Repository as LedgerRepository;
@@ -63,6 +64,7 @@ final class Plugin {
 		( new RumController( new SampleRepository() ) )->register();
 		( new LabClient( new SampleRepository() ) )->register();
 		( new LabScheduler() )->register();
+		( new AvailabilityCheck() )->register();
 
 		$this->register_notifiers();
 		( new WeeklyDigest() )->register();

@@ -42,6 +42,10 @@ final class Util {
 				return sprintf( _n( '%s time', '%s times', (int) $value, 'aftercare' ), number_format_i18n( $value ) );
 			case 'HTTP':
 				/* translators: %d: HTTP status code */
+				if ( 200 === (int) $value ) {
+					// Only stored for a 200 page that was cut off mid-render.
+					return __( 'page cut off', 'aftercare' );
+				}
 				return $value > 0 ? sprintf( __( 'HTTP %d', 'aftercare' ), (int) $value ) : __( 'no response', 'aftercare' );
 			case 'CLS':
 				return number_format_i18n( $value, 3 );

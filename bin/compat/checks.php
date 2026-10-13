@@ -227,6 +227,10 @@ switch ( $step ) {
 		// Change-triggered re-test: two changes debounce into one check, which
 		// carries both ledger ids into the incident it opens.
 		$scheduler = Aftercare\Vitals\LabScheduler::class;
+		// Changes earlier in the flow queued a re-test for the availability
+		// check; start from an empty queue.
+		delete_option( $scheduler::PENDING_OPT );
+		wp_unschedule_hook( $scheduler::CHECK_HOOK );
 		activate_plugin( 'hello.php' );
 		$first_check = wp_next_scheduled( $scheduler::CHECK_HOOK );
 		check( 1 === count( $scheduler::pending() ), 'plugin activation queues a lab re-test' );
@@ -294,6 +298,50 @@ switch ( $step ) {
 		$wpdb->query( $wpdb->prepare( 'UPDATE %i SET last_seen = %s', $wpdb->prefix . 'aftercare_errors', gmdate( 'Y-m-d H:i:s', time() - 2 * DAY_IN_SECONDS ) ) );
 		( new Aftercare\Core\Cron() )->run_hourly();
 		check( null === $incidents->find_open( $location, 'ERROR', 'error' ), 'error incident resolves after a quiet day' );
+		delete_option( 'compat_mail_log' );
+		break;
+
+	case 'availability':
+		$incidents   = Aftercare\Core\Plugin::instance()->incidents();
+		$check       = new Aftercare\Errors\AvailabilityCheck();
+		$page        = add_query_arg( 'compat_page', '1', home_url( '/' ) );
+		$unreachable = 'http://127.0.0.1:1/';
+		$is_open     = static fn( $url ) => $incidents->find_open( $url, 'HTTP', 'availability' );
+		Aftercare\Core\Options::update( array( 'tracked_urls' => array( $page, $unreachable ) ) );
+		update_option( 'compat_mail_log', array(), false );
+
+		update_option( 'compat_page_mode', '503', false );
+		$check->run();
+		check( null === $is_open( $page ), 'one failed availability check opens nothing' );
+		check( (bool) wp_next_scheduled( Aftercare\Errors\AvailabilityCheck::CONFIRM_HOOK ), 'a first failure schedules a confirming check' );
+		$check->run();
+		$open = $is_open( $page );
+		check( null !== $open && 503 === (int) $open['breach_p75'], 'two failures in a row open an availability incident' );
+		check( null === $is_open( home_url( '/' ) ), 'a healthy page opens nothing' );
+		check( null === $is_open( $unreachable ), 'an unreachable URL is inconclusive, not a failure' );
+		check( 1 === count( preg_grep( '/Page unavailable/', (array) get_option( 'compat_mail_log', array() ) ) ), 'availability alert email sent' );
+
+		update_option( 'compat_page_mode', 'ok', false );
+		$check->run();
+		check( null === $is_open( $page ), 'the first healthy check resolves the incident' );
+
+		update_option( 'compat_page_mode', 'cut', false );
+		$check->run();
+		$check->run();
+		$open = $is_open( $page );
+		check( null !== $open && 'page cut off' === Aftercare\Core\Util::format_metric( 'HTTP', (float) $open['breach_p75'] ), 'a page cut off mid-render counts as a failure' );
+
+		// A host that blocks loopback requests: nothing opens, Site Health
+		// gets told instead.
+		$blocked = static fn( $pre, $args, $url ) => str_contains( $url, 'aftercare_check=' ) ? new WP_Error( 'http_request_failed', 'cURL error 7: Failed to connect' ) : $pre;
+		add_filter( 'pre_http_request', $blocked, 10, 3 );
+		$check->run();
+		remove_filter( 'pre_http_request', $blocked, 10 );
+		check( false !== get_option( Aftercare\Errors\AvailabilityCheck::LOOPBACK_OPT ), 'blocked loopback requests are recorded, not reported as failures' );
+		check( null !== $is_open( $page ), 'blocked loopback requests leave open incidents alone' );
+
+		Aftercare\Core\Options::update( array( 'tracked_urls' => array() ) );
+		delete_option( 'compat_page_mode' );
 		delete_option( 'compat_mail_log' );
 		break;
 

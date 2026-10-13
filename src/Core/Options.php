@@ -38,6 +38,7 @@ final class Options {
 			'rum_sample_rate'        => 10, // percent of visits
 			'lab_enabled'            => true,
 			'error_watch'            => true,
+			'availability_watch'     => true,
 			'alert_email'            => get_option( 'admin_email' ),
 			'weekly_digest'          => true,
 			'slack_webhook'          => '',

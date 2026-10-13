@@ -2,6 +2,7 @@
 namespace Aftercare\Vitals;
 
 use Aftercare\Core\Cron;
+use Aftercare\Errors\AvailabilityCheck;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -16,6 +17,9 @@ if ( ! defined( 'ABSPATH' ) ) {
  * DELAY_SECONDS after it and joins the pending list, so a bulk update of a
  * dozen plugins produces one check that knows about all of them. The ledger
  * ids travel with the check into any incident it opens.
+ *
+ * The same check first runs the availability check, which is cheap and not
+ * capped, so a change that breaks a page is caught even with lab checks off.
  */
 final class LabScheduler {
 
@@ -52,7 +56,7 @@ final class LabScheduler {
 	 * DELAY_SECONDS after the newest change.
 	 */
 	public static function queue( int $event_id ): void {
-		if ( $event_id <= 0 || ! LabClient::enabled() ) {
+		if ( $event_id <= 0 || ( ! LabClient::enabled() && ! AvailabilityCheck::enabled() ) ) {
 			return;
 		}
 
@@ -81,7 +85,13 @@ final class LabScheduler {
 	public function run_check(): void {
 		$event_ids = self::pending();
 		delete_option( self::PENDING_OPT );
-		if ( empty( $event_ids ) || ! LabClient::enabled() || ! self::take_daily_slot() ) {
+		if ( empty( $event_ids ) ) {
+			return;
+		}
+
+		( new AvailabilityCheck() )->run();
+
+		if ( ! LabClient::enabled() || ! self::take_daily_slot() ) {
 			return;
 		}
 

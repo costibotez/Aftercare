@@ -99,6 +99,24 @@ if ( 'boot' === $aftercare_fatal ) {
 } elseif ( 'late' === $aftercare_fatal ) {
 	add_action( 'wp_footer', static function () { echo 'x'; flush(); wp_parse_args(); } );
 }
+// A page whose health the availability checks switch through an option.
+if ( isset( $_GET['compat_page'] ) ) {
+	add_action(
+		'template_redirect',
+		static function () {
+			$mode = get_option( 'compat_page_mode', 'ok' );
+			if ( '503' === $mode ) {
+				status_header( 503 );
+				exit;
+			}
+			if ( 'cut' === $mode ) {
+				header( 'Content-Type: text/html; charset=UTF-8' );
+				echo '<!doctype html><html><body><p>Half a page';
+				exit;
+			}
+		}
+	);
+}
 PHP
 
 # Swallow outgoing mail so requests made over HTTP do not depend on sendmail.
@@ -202,7 +220,7 @@ curl -s -b "$JAR" -o "$WORK/settings.html" "$BASE/wp-admin/admin.php?page=afterc
 NONCE="$( grep -m1 -o 'name="_wpnonce" value="[^"]*"' "$WORK/settings.html" | sed 's/.*value="//;s/"$//' )"
 [ -n "$NONCE" ] || fail 'settings nonce not found'
 REDIRECT="$( curl -s -b "$JAR" -o /dev/null -w '%{redirect_url}' \
-	-d "action=aftercare_save_settings&_wpnonce=$NONCE&rum_enabled=1&rum_sample_rate=100&alert_email=admin@example.com" \
+	-d "action=aftercare_save_settings&_wpnonce=$NONCE&rum_enabled=1&rum_sample_rate=100&alert_email=admin@example.com&error_watch=1&availability_watch=1" \
 	"$BASE/wp-admin/admin-post.php" )"
 [[ "$REDIRECT" == *updated=1* ]] || fail "settings save redirected to '$REDIRECT'"
 echo 'PASS settings save'
@@ -230,6 +248,7 @@ for mode in boot early early late; do
 	curl -s -o /dev/null "$BASE/?aftercare_fatal=$mode"
 done
 php "$CHECKS" "$WP_DIR" errors
+php "$CHECKS" "$WP_DIR" availability
 
 kill "$SERVER_PID" 2>/dev/null || true
 SERVER_PID=""

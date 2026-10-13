@@ -67,6 +67,7 @@ final class Cron {
 
 		self::unschedule_hook( LabClient::URL_HOOK );
 		self::unschedule_hook( LabScheduler::CHECK_HOOK );
+		self::unschedule_hook( \Aftercare\Errors\AvailabilityCheck::CONFIRM_HOOK );
 	}
 
 	/**
@@ -153,10 +154,12 @@ final class Cron {
 	}
 
 	/**
-	 * Hourly: resolve error incidents whose error has gone quiet.
+	 * Hourly: resolve error incidents whose error has gone quiet, and check
+	 * that tracked pages still load.
 	 */
 	public function run_hourly(): void {
 		( new \Aftercare\Errors\Incidents() )->resolve_quiet();
+		( new \Aftercare\Errors\AvailabilityCheck() )->run();
 	}
 
 	/**
