@@ -134,6 +134,48 @@ switch ( $step ) {
 
 		do_action( 'aftercare_weekly_digest' );
 		check( (bool) preg_grep( '/digest/i', $mails ), 'weekly digest email sent' );
+
+		// Lab check: a mocked PageSpeed Insights response is stored as lab
+		// samples and never leaks into the field readings.
+		$psi_calls = 0;
+		add_filter(
+			'pre_http_request',
+			static function ( $pre, $args, $request_url ) use ( &$psi_calls ) {
+				if ( ! str_contains( $request_url, 'pagespeedonline' ) ) {
+					return $pre;
+				}
+				++$psi_calls;
+				$audits = array(
+					'largest-contentful-paint' => array( 'numericValue' => 3000 + 100 * $psi_calls ),
+					'cumulative-layout-shift'  => array( 'numericValue' => 0.02 ),
+					'server-response-time'     => array( 'numericValue' => 350 ),
+					'total-blocking-time'      => array( 'numericValue' => 180 ),
+				);
+				return array(
+					'headers'  => array(),
+					'body'     => wp_json_encode( array( 'lighthouseResult' => array( 'audits' => $audits ) ) ),
+					'response' => array(
+						'code'    => 200,
+						'message' => 'OK',
+					),
+					'cookies'  => array(),
+				);
+			},
+			10,
+			3
+		);
+		Aftercare\Core\Options::update( array( 'api_key' => 'compat-test-key' ) );
+		$lab = new Aftercare\Vitals\LabClient( $plugin->samples() );
+		$lab->queue_daily();
+		check( in_array( Aftercare\Vitals\LabClient::URL_HOOK, aftercare_cron_hooks(), true ), 'lab check queued' );
+		$lab->run_url( $url );
+		check( 3 === $psi_calls, 'lab check takes three runs' );
+		$lab_lcp = $plugin->samples()->lab_series( $url, 'LCP', 1 );
+		check( 1 === count( $lab_lcp ) && 3200.0 === (float) end( $lab_lcp )['value'], 'lab check stores the median LCP' );
+		check( 1 === count( $plugin->samples()->lab_series( $url, 'TBT', 1 ) ), 'lab check stores TBT' );
+		$field = $plugin->samples()->latest_for_day( $url, 'LCP', gmdate( 'Y-m-d' ) );
+		check( null === $field || 'lab' !== $field['source'], 'lab samples stay out of field readings' );
+		Aftercare\Core\Options::update( array( 'api_key' => '' ) );
 		break;
 
 	case 'teardown':

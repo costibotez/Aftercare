@@ -21,6 +21,7 @@ It is built for agencies and freelancers who maintain client sites on monthly ca
 = 📈 Core Web Vitals monitor =
 
 * Daily p75 values for **LCP, INP, CLS and TTFB** from the Chrome UX Report — real field data from actual Chrome users, fetched with your own free Google API key
+* Daily **Lighthouse lab checks** (mobile, median of 3 runs) through the PageSpeed Insights API with the same key: LCP, CLS, TTFB and Total Blocking Time, so sites with too little traffic for the Chrome UX Report still get data. Shown separately from field data, never mixed with it
 * Optional **real-user monitoring beacon**: ~2 KB, no external libraries or services, loaded for a configurable sample of visits and aggregated to daily p75 on your own site
 * Track the homepage plus as many other URLs as you like, with sparkline trends and pass / warn / fail status pills
 
@@ -65,6 +66,8 @@ Aftercare does not phone home. CrUX data is fetched directly from Google's API u
 Aftercare connects to the following external services. No connection is made until you configure it.
 
 **Chrome UX Report API (Google)** — used to retrieve real-user Core Web Vitals field data for the URLs you choose to track. Once you enter your own Google API key, the plugin sends your tracked URLs (or your site's origin) together with that API key to `https://chromeuxreport.googleapis.com` once per day per URL. No visitor data, personal data or site content is sent. This service is provided by Google: [Terms of Service](https://developers.google.com/terms), [Privacy Policy](https://policies.google.com/privacy). If no API key is configured, no request is ever made.
+
+**PageSpeed Insights API (Google)**: used for the daily Lighthouse lab checks. When lab checks are enabled and a Google API key is configured, the plugin sends the homepage and up to 5 tracked URLs together with that API key to `https://www.googleapis.com/pagespeedonline/v5/runPagespeed`, 3 times per URL per day. Google then loads those public pages from its own servers. No visitor data or personal data is sent. This service is provided by Google: [Terms of Service](https://developers.google.com/terms), [Privacy Policy](https://policies.google.com/privacy). Lab checks can be turned off in Settings, and no request is made without an API key.
 
 == Installation ==
 

@@ -28,6 +28,14 @@ final class SampleRepository {
 	/** Aggregated real-user beacons for the exact tracked URL. */
 	public const SOURCE_RUM = 'rum';
 
+	/**
+	 * Lighthouse lab run from the PageSpeed Insights API: the median of a few
+	 * synthetic loads, not real visitors. Never part of SOURCE_PRIORITY, so the
+	 * field queries below exclude it explicitly and it is read only through
+	 * lab_series().
+	 */
+	public const SOURCE_LAB = 'lab';
+
 	/** Every CrUX-derived source, for "did we already pull today?" checks. */
 	public const CRUX_SOURCES = array( self::SOURCE_CRUX_URL, self::SOURCE_CRUX_ORIGIN, self::SOURCE_CRUX_LEGACY );
 
@@ -133,12 +141,13 @@ final class SampleRepository {
 		$row = $wpdb->get_row(
 			$wpdb->prepare(
 				'SELECT p75_value, sample_source FROM %i
-				WHERE url_hash = %s AND metric = %s AND recorded_at >= %s AND recorded_at < %s
+				WHERE url_hash = %s AND metric = %s AND sample_source <> %s AND recorded_at >= %s AND recorded_at < %s
 				ORDER BY FIELD(sample_source, %s, %s, %s, %s), id DESC
 				LIMIT 1',
 				$this->table(),
 				Util::url_hash( $url ),
 				$metric,
+				self::SOURCE_LAB,
 				$day . ' 00:00:00',
 				$day . ' 23:59:59',
 				self::SOURCE_CRUX_URL,
@@ -221,7 +230,7 @@ final class SampleRepository {
 					SUBSTRING_INDEX( GROUP_CONCAT( p75_value ORDER BY FIELD(sample_source, %s, %s, %s, %s), id DESC ), ',', 1 ) AS value,
 					SUBSTRING_INDEX( GROUP_CONCAT( sample_source ORDER BY FIELD(sample_source, %s, %s, %s, %s), id DESC ), ',', 1 ) AS source
 				FROM %i
-				WHERE url_hash = %s AND metric = %s AND recorded_at >= %s
+				WHERE url_hash = %s AND metric = %s AND sample_source <> %s AND recorded_at >= %s
 				GROUP BY DATE(recorded_at)
 				ORDER BY day ASC",
 				self::SOURCE_CRUX_URL,
@@ -235,6 +244,7 @@ final class SampleRepository {
 				$this->table(),
 				Util::url_hash( $url ),
 				$metric,
+				self::SOURCE_LAB,
 				Util::days_ago( $days ) . ' 00:00:00'
 			),
 			ARRAY_A
@@ -244,6 +254,40 @@ final class SampleRepository {
 				'day'    => (string) $row['day'],
 				'value'  => (float) $row['value'],
 				'source' => (string) $row['source'],
+			),
+			$rows ?: array()
+		);
+	}
+
+	/**
+	 * Daily lab series for one URL and metric: the latest lab reading of each
+	 * day. Kept apart from series() so lab and field values are never drawn as
+	 * one line.
+	 *
+	 * @return array<int, array{day: string, value: float}>
+	 */
+	public function lab_series( string $url, string $metric, int $days ): array {
+		global $wpdb;
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT DATE(recorded_at) AS day,
+					SUBSTRING_INDEX( GROUP_CONCAT( p75_value ORDER BY id DESC ), ',', 1 ) AS value
+				FROM %i
+				WHERE url_hash = %s AND metric = %s AND sample_source = %s AND recorded_at >= %s
+				GROUP BY DATE(recorded_at)
+				ORDER BY day ASC",
+				$this->table(),
+				Util::url_hash( $url ),
+				$metric,
+				self::SOURCE_LAB,
+				Util::days_ago( $days ) . ' 00:00:00'
+			),
+			ARRAY_A
+		);
+		return array_map(
+			static fn( $row ) => array(
+				'day'   => (string) $row['day'],
+				'value' => (float) $row['value'],
 			),
 			$rows ?: array()
 		);
@@ -260,9 +304,10 @@ final class SampleRepository {
 		$end   = gmdate( 'Y-m-01 00:00:00', strtotime( $start . ' +1 month' ) );
 		$rows  = $wpdb->get_results(
 			$wpdb->prepare(
-				'SELECT metric, AVG(p75_value) AS avg_value FROM %i WHERE url_hash = %s AND recorded_at >= %s AND recorded_at < %s GROUP BY metric',
+				'SELECT metric, AVG(p75_value) AS avg_value FROM %i WHERE url_hash = %s AND sample_source <> %s AND recorded_at >= %s AND recorded_at < %s GROUP BY metric',
 				$this->table(),
 				Util::url_hash( $url ),
+				self::SOURCE_LAB,
 				$start,
 				$end
 			),

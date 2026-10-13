@@ -50,6 +50,7 @@ Every site on a care plan eventually produces the same two conversations: *"the 
 
 ### 📈 Core Web Vitals monitor
 - Daily p75 values for **LCP, INP, CLS and TTFB** from the Chrome UX Report (real Chrome-user field data), fetched with your own free Google API key — origin-level fallback when URL-level data is thin, recorded under its own source so the two levels are never averaged together
+- Daily **Lighthouse lab checks** through the PageSpeed Insights API with the same key: LCP, CLS, TTFB and Total Blocking Time (the lab stand-in for INP), mobile profile, median of 3 runs, for the homepage and up to 5 tracked URLs. Works on low-traffic sites with no Chrome UX Report record; stored as its own `lab` source and never mixed with field data
 - Optional **real-user monitoring beacon**: ~2 KB, dependency-free (native `PerformanceObserver`), loaded for a configurable sample of visits, aggregated to daily p75 on your own site — no third-party service involved
 - Homepage plus up to 5 tracked URLs, 30 days of history, sparkline trends with pass / warn / fail status pills
 

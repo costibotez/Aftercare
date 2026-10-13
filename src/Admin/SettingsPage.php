@@ -38,7 +38,7 @@ final class SettingsPage {
 		echo '<h2>' . esc_html__( 'Vitals collection', 'aftercare' ) . '</h2>';
 		echo '<table class="form-table" role="presentation">';
 
-		echo '<tr><th scope="row"><label for="ac-api-key">' . esc_html__( 'Google API key (CrUX)', 'aftercare' ) . '</label></th><td>';
+		echo '<tr><th scope="row"><label for="ac-api-key">' . esc_html__( 'Google API key', 'aftercare' ) . '</label></th><td>';
 		echo '<input type="password" id="ac-api-key" name="api_key" value="' . esc_attr( (string) $options['api_key'] ) . '" class="regular-text" autocomplete="off" />';
 		echo '<p class="description">' . wp_kses_post( __( 'Your own key for the Chrome UX Report API. Create one in the <a href="https://console.cloud.google.com/apis/library/chromeuxreport.googleapis.com" target="_blank" rel="noopener">Google Cloud Console</a> (free tier is plenty). Aftercare only calls Google with your key — nothing is sent anywhere else.', 'aftercare' ) ) . '</p>';
 		echo '</td></tr>';
@@ -52,6 +52,11 @@ final class SettingsPage {
 			esc_html( home_url( '/' ) )
 		);
 		echo '</p></td></tr>';
+
+		echo '<tr><th scope="row">' . esc_html__( 'Lab checks', 'aftercare' ) . '</th><td>';
+		echo '<label><input type="checkbox" name="lab_enabled" value="1" ' . checked( (bool) $options['lab_enabled'], true, false ) . ' /> ' . esc_html__( 'Run a daily Lighthouse lab test (mobile) of the homepage and tracked URLs through the PageSpeed Insights API', 'aftercare' ) . '</label>';
+		echo '<p class="description">' . wp_kses_post( __( 'Lab data works even on sites with too little traffic for the Chrome UX Report. It uses the same Google API key, which needs the <a href="https://console.cloud.google.com/apis/library/pagespeedonline.googleapis.com" target="_blank" rel="noopener">PageSpeed Insights API</a> enabled as well. Google loads the pages from its own servers, so they must be publicly reachable. Lab values are shown separately from field data and never mixed with it.', 'aftercare' ) ) . '</p>';
+		echo '</td></tr>';
 
 		echo '<tr><th scope="row">' . esc_html__( 'Real-user monitoring', 'aftercare' ) . '</th><td>';
 		echo '<label><input type="checkbox" name="rum_enabled" value="1" ' . checked( (bool) $options['rum_enabled'], true, false ) . ' /> ' . esc_html__( 'Load the RUM beacon (~2 KB) for a sample of visitors and record field vitals from real visits', 'aftercare' ) . '</label>';
@@ -69,6 +74,7 @@ final class SettingsPage {
 			'INP'  => array( __( 'INP budget (ms)', 'aftercare' ), '200' ),
 			'CLS'  => array( __( 'CLS budget (score)', 'aftercare' ), '0.1' ),
 			'TTFB' => array( __( 'TTFB budget (ms)', 'aftercare' ), '800' ),
+			'TBT'  => array( __( 'TBT budget (ms, lab checks only)', 'aftercare' ), '200' ),
 		);
 		foreach ( $budget_fields as $metric => [ $label, $placeholder ] ) {
 			$step = 'CLS' === $metric ? '0.01' : '50';
@@ -165,7 +171,7 @@ final class SettingsPage {
 
 		$budgets_in = (array) wp_unslash( $_POST['budgets'] ?? array() );
 		$budgets    = array();
-		foreach ( Options::METRICS as $metric ) {
+		foreach ( array_keys( Options::defaults()['budgets'] ) as $metric ) {
 			$budgets[ $metric ] = max( 0, (float) ( $budgets_in[ $metric ] ?? Options::defaults()['budgets'][ $metric ] ) );
 		}
 
@@ -174,6 +180,7 @@ final class SettingsPage {
 			'tracked_urls'           => $urls,
 			'budgets'                => $budgets,
 			'rum_enabled'            => ! empty( $_POST['rum_enabled'] ),
+			'lab_enabled'            => ! empty( $_POST['lab_enabled'] ),
 			'rum_sample_rate'        => isset( $_POST['rum_sample_rate'] ) ? max( 1, min( 100, absint( wp_unslash( $_POST['rum_sample_rate'] ) ) ) ) : 10,
 			'alert_email'            => sanitize_email( wp_unslash( $_POST['alert_email'] ?? '' ) ),
 			'weekly_digest'          => ! empty( $_POST['weekly_digest'] ),

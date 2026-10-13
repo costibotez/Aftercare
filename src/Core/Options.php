@@ -15,6 +15,12 @@ final class Options {
 	public const METRICS = array( 'LCP', 'INP', 'CLS', 'TTFB' );
 
 	/**
+	 * Metrics a Lighthouse lab run measures. INP needs a real interaction and
+	 * has no lab value; Total Blocking Time is the accepted lab stand-in.
+	 */
+	public const LAB_METRICS = array( 'LCP', 'CLS', 'TTFB', 'TBT' );
+
+	/**
 	 * @return array<string, mixed>
 	 */
 	public static function defaults(): array {
@@ -26,9 +32,11 @@ final class Options {
 				'INP'  => 200.0,  // ms
 				'CLS'  => 0.1,    // score
 				'TTFB' => 800.0,  // ms
+				'TBT'  => 200.0,  // ms, lab only
 			),
 			'rum_enabled'            => false,
 			'rum_sample_rate'        => 10, // percent of visits
+			'lab_enabled'            => true,
 			'alert_email'            => get_option( 'admin_email' ),
 			'weekly_digest'          => true,
 			'slack_webhook'          => '',
