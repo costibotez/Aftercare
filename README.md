@@ -68,6 +68,12 @@ Every site on a care plan eventually produces the same two conversations: *"the 
 - Every entry is human-readable — "WP Rocket updated 3.15 to 3.16 by admin" — with actor and timestamp
 - Filterable timeline by type and date, CSV export; 90 days of history
 
+### 🚨 Error watch
+- **PHP fatal errors** are caught from the moment Aftercare loads, including errors that kill the request while other plugins load and errors after the page started rendering. Each one is grouped by file and line on a **PHP Errors** screen with its message, occurrence count and the plugin or theme it most likely came from (an error raised inside core is traced through its stack to the plugin or theme that called it)
+- A new error, or one back after a quiet day, writes a ledger entry and opens an incident with an email alert, even when the request died before the rest of WordPress loaded. The incident resolves once the error has not happened for 24 hours
+- **Availability check**: the homepage and tracked URLs are requested every hour and at the start of every post-change re-test. A server error, a missing page or an HTML page cut off before `</html>` fails the check; two failures in a row open an incident, confirmed two minutes after the first, and the first healthy response resolves it. No response at all is never reported as a failure, because the site is checking itself; Site Health explains when the host blocks those loopback requests. It cannot notice the whole server being down, so keep an external uptime monitor for that
+- Stored on your site only: file, line and the first line of the message, without server paths, request data or anything about the visitor
+
 ### 🧰 Fits into your workflow
 - **WordPress dashboard widget** — vitals status pills and open incidents on the main wp-admin screen
 - **Admin bar indicator** — a pass/warn/fail dot for administrators, on the front end too
@@ -149,6 +155,8 @@ Useful hooks:
 | `aftercare_ledger_recorded` | action | A change was written to the ledger (receives the event id and type) |
 | `aftercare_lab_max_urls` / `aftercare_lab_runs` | filter | URLs per lab check (default 6) and Lighthouse runs per URL (default 3) |
 | `aftercare_lab_change_checks_per_day` | filter | Cap on lab re-tests after changes (default 4 a day) |
+| `aftercare_php_error` | action | A fatal error signature was seen for the first time, or again after a quiet day |
+| `aftercare_availability_max_urls` | filter | URLs per availability check (default 6) |
 
 QA shortcut: **Dashboard → Run daily checks now** runs the full daily pipeline (CrUX pull → RUM aggregation → breach detection → retention) on demand. Lower a budget below the current value and run it to force an incident and the alert email.
 

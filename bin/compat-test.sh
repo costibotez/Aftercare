@@ -250,6 +250,15 @@ done
 php "$CHECKS" "$WP_DIR" errors
 php "$CHECKS" "$WP_DIR" availability
 
+# Every incident kind now exists: render each detail page and the error list.
+page 'admin.php?page=aftercare-errors' 200
+grep -q 'Must-use plugin: compat-fatal.php' "$WORK/page.html" || fail 'error list does not name the likely source'
+curl -s -b "$JAR" -o "$WORK/incidents.html" "$BASE/wp-admin/admin.php?page=aftercare-incidents"
+for id in $( grep -o 'incident=[0-9]*' "$WORK/incidents.html" | cut -d= -f2 | sort -un ); do
+	page "admin.php?page=aftercare-incidents&incident=$id" 200
+done
+page 'site-health.php' 200
+
 kill "$SERVER_PID" 2>/dev/null || true
 SERVER_PID=""
 

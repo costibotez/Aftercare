@@ -3,6 +3,7 @@ namespace Aftercare\Admin;
 
 use Aftercare\Core\Cron;
 use Aftercare\Core\Options;
+use Aftercare\Errors\AvailabilityCheck;
 use Aftercare\Incidents\Repository as IncidentRepository;
 use Aftercare\Vitals\LabClient;
 
@@ -12,8 +13,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /**
  * Site Health tests: is vitals collection configured, is the daily pipeline
- * actually running, are lab checks reaching PageSpeed Insights and are any
- * budgets currently breached.
+ * actually running, are lab checks reaching PageSpeed Insights, are fatal
+ * errors or broken pages open, and are any budgets currently breached.
  */
 final class SiteHealth {
 
@@ -41,6 +42,18 @@ final class SiteHealth {
 			$tests['direct']['aftercare_lab'] = array(
 				'label' => __( 'Aftercare lab checks reach PageSpeed Insights', 'aftercare' ),
 				'test'  => array( $this, 'test_lab' ),
+			);
+		}
+		if ( Options::get( 'error_watch' ) ) {
+			$tests['direct']['aftercare_errors'] = array(
+				'label' => __( 'No unresolved PHP fatal errors', 'aftercare' ),
+				'test'  => array( $this, 'test_errors' ),
+			);
+		}
+		if ( AvailabilityCheck::enabled() ) {
+			$tests['direct']['aftercare_availability'] = array(
+				'label' => __( 'Tracked pages load', 'aftercare' ),
+				'test'  => array( $this, 'test_availability' ),
 			);
 		}
 		$tests['direct']['aftercare_incidents'] = array(
@@ -168,6 +181,72 @@ final class SiteHealth {
 				__( 'The last lab check completed %s ago.', 'aftercare' ),
 				human_time_diff( $success )
 			)
+		);
+	}
+
+	/**
+	 * @return array<string, mixed>
+	 */
+	public function test_errors(): array {
+		$open = ( new IncidentRepository() )->count_open( array( IncidentRepository::SOURCE_ERROR ) );
+		if ( 0 === $open ) {
+			return $this->result(
+				'aftercare_errors',
+				'good',
+				__( 'No unresolved PHP fatal errors', 'aftercare' ),
+				__( 'No PHP fatal error incident is open. Error incidents resolve once their error has not happened for 24 hours.', 'aftercare' )
+			);
+		}
+		return $this->result(
+			'aftercare_errors',
+			'critical',
+			sprintf(
+				/* translators: %d: number of errors */
+				_n( '%d PHP fatal error is breaking requests', '%d PHP fatal errors are breaking requests', $open, 'aftercare' ),
+				$open
+			),
+			__( 'Requests on this site are dying with a fatal error. The error list shows where each one happens and the plugin or theme it most likely came from, and the incident lists the changes made in the 72 hours before it started.', 'aftercare' ),
+			'<a href="' . esc_url( admin_url( 'admin.php?page=aftercare-errors' ) ) . '">' . esc_html__( 'View PHP errors', 'aftercare' ) . '</a>'
+		);
+	}
+
+	/**
+	 * @return array<string, mixed>
+	 */
+	public function test_availability(): array {
+		$loopback = get_option( AvailabilityCheck::LOOPBACK_OPT );
+		if ( is_array( $loopback ) ) {
+			return $this->result(
+				'aftercare_availability',
+				'recommended',
+				__( 'Aftercare cannot request this site\'s own pages', 'aftercare' ),
+				sprintf(
+					/* translators: %s: connection error */
+					__( 'The availability check could not connect to any tracked page from the server itself, which usually means the host blocks loopback requests. No page is reported as broken because of this, but broken pages also cannot be detected. Last error: %s', 'aftercare' ),
+					(string) ( $loopback['message'] ?? '' )
+				)
+			);
+		}
+
+		$open = ( new IncidentRepository() )->count_open( array( IncidentRepository::SOURCE_AVAILABILITY ) );
+		if ( 0 === $open ) {
+			return $this->result(
+				'aftercare_availability',
+				'good',
+				__( 'Tracked pages load', 'aftercare' ),
+				__( 'The homepage and tracked URLs answered the last availability check without a server error, a missing page or a cut-off page.', 'aftercare' )
+			);
+		}
+		return $this->result(
+			'aftercare_availability',
+			'critical',
+			sprintf(
+				/* translators: %d: number of pages */
+				_n( '%d tracked page is failing to load', '%d tracked pages are failing to load', $open, 'aftercare' ),
+				$open
+			),
+			__( 'A tracked page failed two availability checks in a row. The incident shows the response and every site change from the 72 hours before.', 'aftercare' ),
+			'<a href="' . esc_url( admin_url( 'admin.php?page=aftercare-incidents' ) ) . '">' . esc_html__( 'View incidents', 'aftercare' ) . '</a>'
 		);
 	}
 

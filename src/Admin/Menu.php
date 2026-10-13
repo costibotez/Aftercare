@@ -57,6 +57,7 @@ final class Menu {
 		add_submenu_page( 'aftercare', __( 'Dashboard', 'aftercare' ), __( 'Dashboard', 'aftercare' ), self::CAP, 'aftercare', $dashboard );
 		add_submenu_page( 'aftercare', __( 'Change Ledger', 'aftercare' ), __( 'Ledger', 'aftercare' ), self::CAP, 'aftercare-ledger', array( new LedgerPage(), 'render' ) );
 		add_submenu_page( 'aftercare', __( 'Incidents', 'aftercare' ), __( 'Incidents', 'aftercare' ) . $badge, self::CAP, 'aftercare-incidents', array( new IncidentsPage(), 'render' ) );
+		add_submenu_page( 'aftercare', __( 'PHP Errors', 'aftercare' ), __( 'PHP Errors', 'aftercare' ), self::CAP, 'aftercare-errors', array( new ErrorsPage(), 'render' ) );
 		if ( class_exists( ReportBuilder::class ) ) {
 			add_submenu_page( 'aftercare', __( 'Client Reports', 'aftercare' ), __( 'Reports', 'aftercare' ), self::CAP, 'aftercare-reports', array( new ReportsPage(), 'render' ) );
 		}

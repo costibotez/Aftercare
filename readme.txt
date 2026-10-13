@@ -40,6 +40,13 @@ It is built for agencies and freelancers who maintain client sites on monthly ca
 * Human-readable entries with the responsible user: "WP Rocket updated 3.15 to 3.16 by admin"
 * Filterable timeline by type and date, CSV export, and the full history kept by default
 
+= 🚨 Error watch =
+
+* **PHP fatal errors** are recorded from the moment Aftercare loads, grouped by file and line on a PHP Errors screen with the plugin or theme that most likely caused them
+* A new fatal error writes a ledger entry and opens an incident with an email alert, even when it broke the site while plugins were loading
+* An **availability check** requests the homepage and tracked URLs every hour and shortly after each update, and opens an incident when a page returns a server error, goes missing or is cut off before it finishes rendering
+* Only the file, line and first line of the message are stored, on your own site, with nothing about the visitor
+
 = 🧰 Fits into your workflow =
 
 * **Dashboard widget** with vitals status and open incidents on the main wp-admin screen, plus a pass / warn / fail dot in the admin bar

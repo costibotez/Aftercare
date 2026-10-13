@@ -292,12 +292,15 @@ switch ( $step ) {
 		check( 1 === count( $incidents->open_for_source( 'error' ) ), 'a repeating fatal error opens one incident' );
 		$subjects = (array) get_option( 'compat_mail_log', array() );
 		check( 1 === count( preg_grep( '/PHP fatal error/', $subjects ) ), 'alert email sent from a request that died before plugins_loaded' );
+		$health = new Aftercare\Admin\SiteHealth();
+		check( 'critical' === $health->test_errors()['status'], 'Site Health flags an open fatal error' );
 
 		( new Aftercare\Core\Cron() )->run_hourly();
 		check( null !== $incidents->find_open( $location, 'ERROR', 'error' ), 'error incident stays open while the error is recent' );
 		$wpdb->query( $wpdb->prepare( 'UPDATE %i SET last_seen = %s', $wpdb->prefix . 'aftercare_errors', gmdate( 'Y-m-d H:i:s', time() - 2 * DAY_IN_SECONDS ) ) );
 		( new Aftercare\Core\Cron() )->run_hourly();
 		check( null === $incidents->find_open( $location, 'ERROR', 'error' ), 'error incident resolves after a quiet day' );
+		check( 'good' === $health->test_errors()['status'], 'Site Health clears once the error incident resolves' );
 		delete_option( 'compat_mail_log' );
 		break;
 
@@ -330,6 +333,8 @@ switch ( $step ) {
 		$check->run();
 		$open = $is_open( $page );
 		check( null !== $open && 'page cut off' === Aftercare\Core\Util::format_metric( 'HTTP', (float) $open['breach_p75'] ), 'a page cut off mid-render counts as a failure' );
+		$health = new Aftercare\Admin\SiteHealth();
+		check( 'critical' === $health->test_availability()['status'], 'Site Health flags a failing tracked page' );
 
 		// A host that blocks loopback requests: nothing opens, Site Health
 		// gets told instead.
@@ -339,6 +344,7 @@ switch ( $step ) {
 		remove_filter( 'pre_http_request', $blocked, 10 );
 		check( false !== get_option( Aftercare\Errors\AvailabilityCheck::LOOPBACK_OPT ), 'blocked loopback requests are recorded, not reported as failures' );
 		check( null !== $is_open( $page ), 'blocked loopback requests leave open incidents alone' );
+		check( 'recommended' === $health->test_availability()['status'], 'Site Health explains blocked loopback requests' );
 
 		Aftercare\Core\Options::update( array( 'tracked_urls' => array() ) );
 		delete_option( 'compat_page_mode' );

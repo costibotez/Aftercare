@@ -75,6 +75,14 @@ Free. It is what makes the free plugin useful on low-traffic sites and the direc
 
 ## Feature 2: Error and availability watch
 
+**Built differently from this plan, and why:**
+
+- Capture uses the `wp_php_error_args` filter plus our own shutdown function, not `wp_should_handle_php_error`. Core applies that filter only to errors it would not handle anyway, so it never sees a real fatal. Core's handler also ends the request before later shutdown functions run, which is why the error page filter is needed.
+- Error and availability incidents reuse the `incidents.sample_source` column (`error`, `availability`) instead of a new `kind` column. It already separates field and lab incidents, so nothing new was needed.
+- Unavailable pages open incidents but write no `site_unavailable` ledger entry: the ledger stays a record of changes and of fatal errors.
+- A culprit in core is traced through the stack trace to the first plugin or theme frame, since most fatals in core files are caused by the caller.
+- No response at all, 401 and 403 are inconclusive rather than failures, and a first failure triggers a confirming check after two minutes.
+
 ### What the user gets
 
 - Every PHP fatal error on the site is captured, grouped by signature and shown in the ledger as "Fatal error in woocommerce/includes/class-wc-cart.php line 412 (37 times in 2 hours)".
