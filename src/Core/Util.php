@@ -38,6 +38,36 @@ final class Util {
 	}
 
 	/**
+	 * Whether a URL's host is, or resolves to, an address that is not on the
+	 * public internet: loopback, private, link-local (which includes cloud
+	 * metadata at 169.254.169.254), carrier-grade NAT or reserved.
+	 *
+	 * wp_safe_remote_get() makes the same check, but WordPress versions
+	 * before 7.0 do not treat link-local or carrier-grade NAT addresses as
+	 * internal, so this check is needed on every version Aftercare supports.
+	 * A host that does not resolve is left to core, which refuses it.
+	 *
+	 * @param string $url URL to test.
+	 */
+	public static function is_internal_host( string $url ): bool {
+		$host = trim( (string) wp_parse_url( $url, PHP_URL_HOST ), '[]' );
+		if ( '' === $host ) {
+			return true;
+		}
+		$ips = filter_var( $host, FILTER_VALIDATE_IP ) ? array( $host ) : gethostbynamel( $host );
+		foreach ( is_array( $ips ) ? $ips : array() as $ip ) {
+			if ( ! filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE ) ) {
+				return true;
+			}
+			$parts = array_map( 'intval', explode( '.', $ip ) );
+			if ( 4 === count( $parts ) && 100 === $parts[0] && $parts[1] >= 64 && $parts[1] <= 127 ) {
+				return true; // 100.64.0.0/10, carrier-grade NAT.
+			}
+		}
+		return false;
+	}
+
+	/**
 	 * A CSV cell that spreadsheet apps show as text rather than run as a
 	 * formula. Cells starting with =, +, -, @, a tab or a carriage return
 	 * get a leading apostrophe, so a post titled =HYPERLINK(...) exports as

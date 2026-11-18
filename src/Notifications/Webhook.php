@@ -2,6 +2,7 @@
 namespace Aftercare\Notifications;
 
 use Aftercare\Core\Options;
+use Aftercare\Core\Util;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -27,7 +28,7 @@ final class Webhook {
 	 */
 	public function notify( $incident, string $event = 'incident.opened' ): void {
 		$url = esc_url_raw( (string) Options::get( 'webhook_url' ) );
-		if ( '' === $url || ! is_array( $incident ) ) {
+		if ( '' === $url || ! is_array( $incident ) || Util::is_internal_host( $url ) ) {
 			return;
 		}
 		wp_safe_remote_post(

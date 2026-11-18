@@ -445,7 +445,15 @@ switch ( $step ) {
 		$hops   = array();
 		$result = $check->check( home_url( '/compat-route/metadata/' ) );
 		remove_filter( 'pre_http_request', $route, 10 );
-		check( Aftercare\Errors\AvailabilityCheck::INCONCLUSIVE === $result[0] && 2 === count( $hops ) && $hops[1]['safe'], 'a redirect to an internal address is refused' );
+		check( Aftercare\Errors\AvailabilityCheck::INCONCLUSIVE === $result[0] && 1 === count( $hops ), 'a redirect to the cloud metadata address is refused before any request' );
+
+		// Internal addresses, including those WordPress before 7.0 lets
+		// through wp_safe_remote_get(): link-local and carrier-grade NAT.
+		$util = Aftercare\Core\Util::class;
+		foreach ( array( 'http://169.254.169.254/', 'http://100.64.0.1/', 'http://10.0.0.1/', 'http://127.0.0.1/', 'http://[::1]/', 'http://[fe80::1]/', 'http://localhost/' ) as $internal ) {
+			check( $util::is_internal_host( $internal ), "$internal is internal" );
+		}
+		check( ! $util::is_internal_host( 'https://93.184.215.14/' ) && ! $util::is_internal_host( 'https://shop.example/' ), 'a public address, or a host that does not resolve, is left to core' );
 
 		// A tracked page the server cannot connect to.
 		$refuse = static fn( $pre, $args, $url ) => str_contains( $url, 'compat-unreachable' ) ? new WP_Error( 'http_request_failed', 'cURL error 7: Failed to connect' ) : $pre;

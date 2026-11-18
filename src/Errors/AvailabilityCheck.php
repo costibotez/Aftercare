@@ -178,6 +178,8 @@ final class AvailabilityCheck {
 				/** This filter is documented in wp-includes/class-wp-http-streams.php */
 				$args['sslverify'] = apply_filters( 'https_local_ssl_verify', false );
 				$response          = wp_remote_get( $url, $args );
+			} elseif ( Util::is_internal_host( $url ) ) {
+				return new \WP_Error( 'http_request_failed', __( 'Refused a request to an internal address.', 'aftercare' ) );
 			} else {
 				$args['sslverify'] = true;
 				$response          = wp_safe_remote_get( $url, $args );
