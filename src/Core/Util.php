@@ -38,6 +38,22 @@ final class Util {
 	}
 
 	/**
+	 * A CSV cell that spreadsheet apps show as text rather than run as a
+	 * formula. Cells starting with =, +, -, @, a tab or a carriage return
+	 * get a leading apostrophe, so a post titled =HYPERLINK(...) exports as
+	 * '=HYPERLINK(...).
+	 *
+	 * @param mixed $value Cell value.
+	 */
+	public static function csv_safe( $value ): string {
+		$value = (string) $value;
+		if ( '' !== $value && str_contains( "=+-@\t\r", $value[0] ) ) {
+			return "'" . $value;
+		}
+		return $value;
+	}
+
+	/**
 	 * @param float[] $values
 	 */
 	public static function percentile( array $values, float $percentile = 75.0 ): float {
