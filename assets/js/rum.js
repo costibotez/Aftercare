@@ -17,7 +17,8 @@
 		return;
 	}
 
-	var pageUrl = location.href.split( '#' )[ 0 ];
+	// The server ignores the query string and fragment, so they are never sent.
+	var pageUrl = location.href.split( /[?#]/ )[ 0 ];
 	var metrics = {};
 	var sent = false;
 

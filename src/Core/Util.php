@@ -15,6 +15,29 @@ final class Util {
 	}
 
 	/**
+	 * The part of a URL that identifies a page: lowercase scheme and host,
+	 * the port when one is given and the path without a trailing slash. The
+	 * query string and fragment are dropped, so "https://Example.com/page/?a=1"
+	 * and "https://example.com/page" normalise to the same value.
+	 *
+	 * @param string $url Any URL.
+	 * @return string Normalised URL, or '' for anything that is not an absolute
+	 *                http(s) URL.
+	 */
+	public static function normalize_url( string $url ): string {
+		$parts = wp_parse_url( trim( $url ) );
+		if ( ! is_array( $parts ) || empty( $parts['host'] ) ) {
+			return '';
+		}
+		$scheme = strtolower( (string) ( $parts['scheme'] ?? '' ) );
+		if ( 'http' !== $scheme && 'https' !== $scheme ) {
+			return '';
+		}
+		$port = isset( $parts['port'] ) ? ':' . (int) $parts['port'] : '';
+		return $scheme . '://' . strtolower( (string) $parts['host'] ) . $port . untrailingslashit( (string) ( $parts['path'] ?? '' ) );
+	}
+
+	/**
 	 * @param float[] $values
 	 */
 	public static function percentile( array $values, float $percentile = 75.0 ): float {

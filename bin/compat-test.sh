@@ -237,6 +237,8 @@ rum() {
 [ "$( rum "{\"metric\":\"LCP\",\"value\":1800,\"url\":\"$BASE/\"}" )" = 204 ] || fail 'RUM endpoint rejected a valid reading'
 [ "$( rum '{"metric":"XYZ","value":1,"url":"x"}' )" = 400 ] || fail 'RUM endpoint accepted an invalid metric'
 echo 'PASS RUM endpoint validates input'
+[ "$( rum "{\"metric\":\"LCP\",\"value\":1800,\"url\":\"$BASE/$( printf '%01100d' 0 )\"}" )" = 413 ] || fail 'RUM endpoint accepted a body over 1 KB'
+echo 'PASS RUM endpoint rejects oversized bodies'
 
 curl -s -b "$JAR" -o "$WORK/ledger.html" "$BASE/wp-admin/admin.php?page=aftercare-ledger"
 EXPORT="$( grep -m1 -o 'admin-post.php?action=aftercare_ledger_export[^"]*' "$WORK/ledger.html" | sed 's/&#038;/\&/g; s/&amp;/\&/g' )"
@@ -251,6 +253,7 @@ for mode in boot early early late; do
 done
 php "$CHECKS" "$WP_DIR" errors
 php "$CHECKS" "$WP_DIR" availability
+php "$CHECKS" "$WP_DIR" rum
 
 # Every incident kind now exists: render each detail page and the error list.
 page 'admin.php?page=aftercare-errors' 200

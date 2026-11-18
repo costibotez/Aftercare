@@ -4,7 +4,7 @@
  * install. Each step loads WordPress, exercises the plugin and exits non-zero
  * on the first failed assertion.
  *
- * Usage: php checks.php <wordpress-dir> <install|activate|flow|teardown>
+ * Usage: php checks.php <wordpress-dir> <install|activate|flow|errors|availability|rum|teardown>
  */
 
 if ( 'cli' !== PHP_SAPI ) {
@@ -87,7 +87,7 @@ switch ( $step ) {
 		$result = activate_plugin( 'aftercare/aftercare.php' );
 		check( ! is_wp_error( $result ), 'plugin activates' . ( is_wp_error( $result ) ? ': ' . $result->get_error_message() : '' ) );
 		check( is_plugin_active( 'aftercare/aftercare.php' ), 'plugin is active' );
-		check( 5 === count( aftercare_tables() ), 'five tables created' );
+		check( 6 === count( aftercare_tables() ), 'six tables created' );
 		$hooks = aftercare_cron_hooks();
 		check( in_array( 'aftercare_daily_tasks', $hooks, true ), 'daily cron scheduled' );
 		check( in_array( 'aftercare_weekly_digest', $hooks, true ), 'weekly digest cron scheduled' );
@@ -349,6 +349,192 @@ switch ( $step ) {
 		Aftercare\Core\Options::update( array( 'tracked_urls' => array() ) );
 		delete_option( 'compat_page_mode' );
 		delete_option( 'compat_mail_log' );
+		break;
+
+	case 'rum':
+		global $wpdb;
+		$rum   = Aftercare\Vitals\RumController::class;
+		$table = $rum::table();
+		$util  = Aftercare\Core\Util::class;
+		Aftercare\Core\Options::update(
+			array(
+				'rum_enabled'  => true,
+				'tracked_urls' => array( home_url( '/pricing/' ) ),
+			)
+		);
+		$wpdb->query( $wpdb->prepare( 'DELETE FROM %i', $table ) );
+
+		$beacon  = static function ( array $body, string $ip = '203.0.113.1', ?string $raw = null ): int {
+			$_SERVER['REMOTE_ADDR'] = $ip;
+			$request                = new WP_REST_Request( 'POST', '/aftercare/v1/rum' );
+			$request->set_header( 'Content-Type', 'application/json' );
+			$request->set_body( $raw ?? wp_json_encode( $body ) );
+			return rest_do_request( $request )->get_status();
+		};
+		$rows    = static fn( string $where = '1 = 1' ) => (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM %i WHERE {$where}", $table ) );
+		$options = static fn() => md5( serialize( $wpdb->get_results( "SELECT option_name, option_value FROM {$wpdb->options} ORDER BY option_name", ARRAY_N ) ) );
+		$pricing = $util::url_hash( $util::normalize_url( home_url( '/pricing/' ) ) );
+
+		check( $util::normalize_url( 'https://Example.COM:8443/Page/?a=1#top' ) === 'https://example.com:8443/Page', 'URL normalised: query, fragment and trailing slash dropped, host lowercased' );
+		check( $util::normalize_url( 'https://example.com/page' ) === $util::normalize_url( 'https://example.com/page/' ), '/page and /page/ normalise alike' );
+		check( '' === $util::normalize_url( 'javascript:alert(1)' ) && '' === $util::normalize_url( '/relative' ), 'non-http URLs normalise to nothing' );
+
+		// Endless made-up addresses on this host: nothing stored, no option
+		// written, not even a rate limit transient.
+		$before = $options();
+		$codes  = array();
+		for ( $i = 0; $i < 10000; $i++ ) {
+			$code           = $beacon(
+				array(
+					'metric' => 'LCP',
+					'value'  => 1000 + $i % 500,
+					'url'    => home_url( '/x' . $i . '-' . wp_generate_password( 6, false ) ),
+				),
+				'192.0.2.' . ( $i % 250 )
+			);
+			$codes[ $code ] = true;
+		}
+		check( array( 204 => true ) === $codes, '10,000 beacons for untracked pages all answer 204' );
+		check( 0 === $rows(), '10,000 beacons for untracked pages store nothing' );
+		check( $before === $options(), '10,000 beacons for untracked pages leave wp_options untouched' );
+		check( false === get_option( $rum::BUFFER_OPTION ), 'no buffer option is written' );
+
+		foreach ( array( '/pricing', '/pricing/', '/pricing/?utm_source=mail', '/PRICING/#plans' ) as $path ) {
+			$beacon(
+				array(
+					'metric' => 'LCP',
+					'value'  => 1500,
+					'url'    => home_url( $path ),
+				)
+			);
+		}
+		check( 4 === $rows( "url_hash = '{$pricing}' AND metric = 'LCP'" ), 'a tracked page is buffered under one key whatever its slash, query or case' );
+		$upper_host = preg_replace( '#^(https?://)([^/:]+)#', '$1' . strtoupper( (string) wp_parse_url( home_url(), PHP_URL_HOST ) ), home_url( '/pricing/' ) );
+		$beacon(
+			array(
+				'metric' => 'LCP',
+				'value'  => 1500,
+				'url'    => $upper_host,
+			)
+		);
+		check( 5 === $rows( "url_hash = '{$pricing}'" ), 'an uppercase host matches the tracked page' );
+		$beacon(
+			array(
+				'metric' => 'LCP',
+				'value'  => 1500,
+				'url'    => 'https://evil.example/pricing/',
+			)
+		);
+		check( 5 === $rows(), 'another host is ignored' );
+
+		$padded = wp_json_encode(
+			array(
+				'metric' => 'LCP',
+				'value'  => 1500,
+				'url'    => home_url( '/pricing/' ),
+				'pad'    => str_repeat( 'x', 1100 ),
+			)
+		);
+		check( 413 === $beacon( array(), '203.0.113.1', $padded ), 'a body over 1 KB is rejected with 413' );
+		check( 5 === $rows(), 'a rejected body stores nothing' );
+
+		// Rate limit: 30 beacons a minute per IP address. Retried once if the
+		// minute rolls over mid-test, which would reset the window.
+		for ( $attempt = 1; $attempt <= 2; $attempt++ ) {
+			$minute = intdiv( time(), MINUTE_IN_SECONDS );
+			$ip     = '198.51.100.' . $attempt;
+			$start  = $rows();
+			$last   = 0;
+			for ( $i = 0; $i < 31; $i++ ) {
+				$last = $beacon(
+					array(
+						'metric' => 'TTFB',
+						'value'  => 300,
+						'url'    => home_url( '/' ),
+					),
+					$ip
+				);
+			}
+			if ( intdiv( time(), MINUTE_IN_SECONDS ) === $minute ) {
+				break;
+			}
+		}
+		check( 429 === $last && 30 === $rows() - $start, 'the 31st beacon in a minute from one IP address is refused' );
+		check( 204 === $beacon( array( 'metric' => 'TTFB', 'value' => 300, 'url' => home_url( '/' ) ), '198.51.100.99' ), 'another IP address is still accepted' );
+
+		// Hard cap per page, metric and day.
+		add_filter( 'aftercare_rum_rate_limit', '__return_zero' );
+		for ( $i = 0; $i < 520; $i++ ) {
+			$beacon(
+				array(
+					'metric' => 'CLS',
+					'value'  => 0.05,
+					'url'    => home_url( '/pricing/' ),
+				)
+			);
+		}
+		remove_filter( 'aftercare_rum_rate_limit', '__return_zero' );
+		check( 500 === $rows( "url_hash = '{$pricing}' AND metric = 'CLS'" ), 'a page keeps at most 500 values per metric and day' );
+
+		// Aggregation reads earlier days from the table and deletes them.
+		$samples   = Aftercare\Core\Plugin::instance()->samples();
+		$yesterday = $util::days_ago( 1 );
+		$home_hash = $util::url_hash( $util::normalize_url( home_url( '/' ) ) );
+		$seed      = static function ( string $day, string $hash, string $metric, array $values ) use ( $wpdb, $table ): void {
+			foreach ( $values as $value ) {
+				$wpdb->insert( $table, array( 'day' => $day, 'url_hash' => $hash, 'metric' => $metric, 'value' => $value ) );
+			}
+		};
+		$seed( $yesterday, $pricing, 'INP', array( 100, 200, 300, 400, 500 ) );
+		$seed( $yesterday, $pricing, 'TTFB', array( 100, 200 ) );
+		$seed( $yesterday, md5( 'untracked' ), 'LCP', array( 1, 2, 3, 4, 5 ) );
+		$today_rows = $rows( $wpdb->prepare( 'day = %s', gmdate( 'Y-m-d' ) ) );
+
+		// The buffer option used up to 1.1.0, as an upgrade leaves it. INP,
+		// because the flow step seeded CrUX LCP for these days and CrUX
+		// outranks RUM.
+		$two_days_ago = $util::days_ago( 2 );
+		update_option(
+			$rum::BUFFER_OPTION,
+			array(
+				$two_days_ago      => array(
+					$home_hash => array(
+						'INP' => array(
+							'url'    => home_url( '/' ),
+							'values' => array( 1000, 2000, 3000, 4000, 5000 ),
+						),
+					),
+				),
+				gmdate( 'Y-m-d' ) => array(
+					$pricing        => array(
+						'INP' => array(
+							'url'    => home_url( '/pricing' ),
+							'values' => array( 80, 90, 100 ),
+						),
+					),
+					md5( 'nowhere' ) => array(
+						'INP' => array(
+							'url'    => home_url( '/nowhere/' ),
+							'values' => array( 80, 90, 100 ),
+						),
+					),
+				),
+			),
+			false
+		);
+
+		$rum::aggregate_buffer( $samples );
+		$inp = $samples->latest_for_day( home_url( '/pricing/' ), 'INP', $yesterday );
+		check( null !== $inp && 'rum' === $inp['source'] && 400.0 === $inp['value'], 'buffered values aggregate into a daily p75 for the tracked URL' );
+		check( null === $samples->latest_for_day( home_url( '/pricing/' ), 'TTFB', $yesterday ), 'fewer than four values aggregate into nothing' );
+		check( 0 === $rows( $wpdb->prepare( 'day < %s', gmdate( 'Y-m-d' ) ) ), 'aggregated days are deleted from the buffer table' );
+		$legacy = $samples->latest_for_day( home_url( '/' ), 'INP', $two_days_ago );
+		check( null !== $legacy && 4000.0 === $legacy['value'], 'past days in the 1.1.0 buffer option still aggregate' );
+		check( $today_rows + 3 === $rows( $wpdb->prepare( 'day = %s', gmdate( 'Y-m-d' ) ) ), "today's tracked values from the 1.1.0 option move into the buffer table" );
+		check( false === get_option( $rum::BUFFER_OPTION ), 'the 1.1.0 buffer option is deleted' );
+
+		$wpdb->query( $wpdb->prepare( 'DELETE FROM %i', $table ) );
+		Aftercare\Core\Options::update( array( 'tracked_urls' => array() ) );
 		break;
 
 	case 'teardown':
