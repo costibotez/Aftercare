@@ -154,17 +154,48 @@ final class Collector {
 	}
 
 	/**
-	 * First line of the message, without the stack trace or server paths.
+	 * First line of the message, without the stack trace, server paths or
+	 * anything that looks like a credential. Database errors such as a
+	 * PDOException or a mysqli connect error can name the database user,
+	 * host or password, and this text is stored and emailed.
 	 */
 	public static function clean_message( string $message ): string {
 		$message = strtok( $message, "\n" );
 		$message = false === $message ? '' : $message;
 		// Only directory prefixes are removed; the message itself is not
-		// normalised, so namespaces keep their backslashes.
+		// normalised, so namespaces keep their backslashes. The WordPress
+		// root itself becomes "~/".
+		$root = trailingslashit( wp_normalize_path( ABSPATH ) );
 		foreach ( self::bases() as $base => $prefix ) {
+			$prefix  = $base === $root ? '~/' : $prefix;
 			$message = str_replace( array( $base, str_replace( '/', DIRECTORY_SEPARATOR, $base ) ), $prefix, $message );
 		}
-		return mb_substr( trim( $message ), 0, 200 );
+		$message = str_replace( array( untrailingslashit( $root ), untrailingslashit( str_replace( '/', DIRECTORY_SEPARATOR, $root ) ) ), '~', $message );
+		return mb_substr( trim( self::redact( $message ) ), 0, 200 );
+	}
+
+	/**
+	 * Masks credentials: "password=...", "token: ..." and the like, the
+	 * 'user'@'host' pair of a MySQL access error, and the database password
+	 * and host from wp-config.php wherever they appear verbatim.
+	 *
+	 * @param string $message Error message.
+	 */
+	public static function redact( string $message ): string {
+		$message = (string) preg_replace( '/(password|passwd|pwd|secret|token|key)\s*[=:]\s*\S+/i', '$1=[redacted]', $message );
+		$message = (string) preg_replace( "/'[^'\s]*'@'[^'\s]*'/", "'[redacted]'@'[redacted]'", $message );
+
+		$literals = array();
+		if ( defined( 'DB_PASSWORD' ) && strlen( (string) DB_PASSWORD ) >= 6 ) {
+			$literals[] = (string) DB_PASSWORD;
+		}
+		if ( defined( 'DB_HOST' ) && strlen( (string) DB_HOST ) >= 4 && ! in_array( strtolower( (string) DB_HOST ), array( 'localhost', '127.0.0.1', '::1' ), true ) ) {
+			$literals[] = (string) DB_HOST;
+		}
+		foreach ( $literals as $literal ) {
+			$message = (string) preg_replace( '/(?<![\w.-])' . preg_quote( $literal, '/' ) . '(?![\w.-])/', '[redacted]', $message );
+		}
+		return $message;
 	}
 
 	/**

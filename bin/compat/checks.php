@@ -343,6 +343,23 @@ switch ( $step ) {
 		check( str_starts_with( (string) ( $row['file'] ?? '' ), 'wp-includes/' ), 'error file stored relative to the WordPress root' );
 		check( 'mu-plugin:compat-fatal.php' === ( $row['culprit'] ?? '' ), 'culprit found in the stack trace of a core error' );
 		check( ! str_contains( (string) ( $row['message'] ?? '' ), ABSPATH ) && ! str_contains( (string) ( $row['message'] ?? '' ), 'Stack trace' ), 'error message stripped of paths and stack trace' );
+
+		// Stored messages never carry credentials or the WordPress root.
+		$collector = Aftercare\Errors\Collector::class;
+		$clean     = $collector::clean_message( "SQLSTATE[HY000] [1045] Access denied for user 'wp_prod'@'db.internal' (using password: YES) in " . ABSPATH . "wp-includes/class-wpdb.php:2050\nStack trace:\n#0 {main}" );
+		check( ! str_contains( $clean, 'wp_prod' ) && ! str_contains( $clean, 'db.internal' ), 'database user and host are redacted from a connect error' );
+		check( str_contains( $clean, '~/wp-includes/class-wpdb.php' ) && ! str_contains( $clean, ABSPATH ), 'the WordPress root becomes ~/' );
+		$clean = $collector::clean_message( 'Connect failed: password=hunter2 Token: abc123 api_key = XYZ789 pwd:s3cret' );
+		foreach ( array( 'hunter2', 'abc123', 'XYZ789', 's3cret' ) as $secret ) {
+			check( ! str_contains( $clean, $secret ), "credential value $secret is redacted" );
+		}
+		check( str_contains( $collector::clean_message( 'open_basedir restriction in effect. File(' . untrailingslashit( ABSPATH ) . ')' ), 'File(~)' ), 'the bare WordPress root becomes ~' );
+		if ( strlen( DB_PASSWORD ) >= 6 && ! in_array( strtolower( DB_HOST ), array( 'localhost', '127.0.0.1', '::1' ), true ) ) {
+			$clean = $collector::clean_message( 'Could not connect to ' . DB_HOST . ' with ' . DB_PASSWORD );
+			check( ! str_contains( $clean, DB_PASSWORD ) && ! str_contains( $clean, DB_HOST ), 'the configured database password and host are redacted verbatim' );
+		} else {
+			echo "SKIP verbatim database password and host redaction (short password or local host)\n";
+		}
 		$entries = Aftercare\Core\Plugin::instance()->ledger()->query( array( 'type' => 'php_error' ), 10 );
 		check( 1 === count( $entries ), 'one ledger entry for a repeating fatal error' );
 

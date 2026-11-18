@@ -44,7 +44,7 @@ It is built for agencies and freelancers who maintain client sites on monthly ca
 
 * **PHP fatal errors** are recorded from the moment Aftercare loads, grouped by file and line on a PHP Errors screen with the plugin or theme that most likely caused them
 * A new fatal error writes a ledger entry and opens an incident with an email alert, even when it broke the site while plugins were loading
-* An **availability check** requests the homepage and tracked URLs every hour and shortly after each update, and opens an incident when a page returns a server error, goes missing or is cut off before it finishes rendering
+* An **availability check** requests the homepage and tracked URLs every hour and shortly after each update, and opens an incident when a page returns a server error, goes missing or is cut off before it finishes rendering. Each request adds an `aftercare_check` parameter so it gets past page caches and reaches your server (see the FAQ)
 * Only the file, line and first line of the message are stored, on your own site, with nothing about the visitor
 
 = 🧰 Fits into your workflow =
@@ -98,6 +98,10 @@ No. Tracked URLs are unlimited, vitals are kept for thirteen months and the ledg
 = What happens to my data when I delete the plugin? =
 
 By default all Aftercare tables and options are removed on uninstall. Tick "Keep Aftercare data" in Settings to preserve them.
+
+= Does the availability check bypass my page cache or CDN? =
+
+Yes, on purpose. Every availability request adds `?aftercare_check=<timestamp>` to the tracked URL, so page caches and CDNs pass it through to your server instead of answering from a cached copy that could hide a broken page. Each check therefore reaches the origin server: one request per URL (the homepage and up to 5 tracked URLs, adjustable with the `aftercare_availability_max_urls` filter) every hour, a confirming request 2 minutes after a failure and a check after each plugin, theme or core update. The requests come from your own server with the user agent "Aftercare availability check". Turn the availability check off in Settings if you would rather not have this traffic.
 
 = Can I run the checks from a server cron instead of WP-Cron? =
 
