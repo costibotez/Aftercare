@@ -126,7 +126,7 @@ Security and robustness release from an audit of 1.1.0.
 * Security: tracked URLs must be on this site (the hosts of the site address and the WordPress address, or domains added with the new `aftercare_allowed_hosts` filter). Other lines are refused with a notice when you save, and tracked URLs saved earlier for other hosts are no longer requested
 * Security: the availability check follows redirects one hop at a time. Only requests to this site use the `https_local_ssl_verify` setting; any other host goes through the WordPress safe request functions with TLS always verified
 * Security: Slack and webhook URLs must be https URLs and are sent to with the WordPress safe request functions
-* Security: requests to internal addresses are refused on every supported WordPress version, including link-local cloud metadata (169.254.169.254) and carrier-grade NAT addresses, which WordPress before 7.0 does not block itself
+* Security: requests to internal addresses are refused on every supported WordPress version, including link-local cloud metadata (169.254.169.254) and carrier-grade NAT addresses, which WordPress before 7.1 does not block itself
 * Security: the Google API key and the Slack and webhook URLs are no longer written into the settings page. Their fields show a "Saved" placeholder, a blank field keeps the stored value and a checkbox removes it
 * Security: stored PHP error messages are scrubbed of passwords, tokens, keys and database user and host names, and the WordPress root path is shown as ~/
 * Documented that the availability check adds an `aftercare_check` parameter to get past page caches, so each hourly request reaches your server

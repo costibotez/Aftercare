@@ -447,7 +447,7 @@ switch ( $step ) {
 		remove_filter( 'pre_http_request', $route, 10 );
 		check( Aftercare\Errors\AvailabilityCheck::INCONCLUSIVE === $result[0] && 1 === count( $hops ), 'a redirect to the cloud metadata address is refused before any request' );
 
-		// Internal addresses, including those WordPress before 7.0 lets
+		// Internal addresses, including those WordPress before 7.1 lets
 		// through wp_safe_remote_get(): link-local and carrier-grade NAT.
 		$util = Aftercare\Core\Util::class;
 		foreach ( array( 'http://169.254.169.254/', 'http://100.64.0.1/', 'http://10.0.0.1/', 'http://127.0.0.1/', 'http://[::1]/', 'http://[fe80::1]/', 'http://localhost/' ) as $internal ) {
