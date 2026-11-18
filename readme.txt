@@ -23,7 +23,7 @@ It is built for agencies and freelancers who maintain client sites on monthly ca
 * Daily p75 values for **LCP, INP, CLS and TTFB** from the Chrome UX Report — real field data from actual Chrome users, fetched with your own free Google API key
 * Daily **Lighthouse lab checks** (mobile, median of 3 runs) through the PageSpeed Insights API with the same key: LCP, CLS, TTFB and Total Blocking Time, so sites with too little traffic for the Chrome UX Report still get data. Shown separately from field data, never mixed with it
 * Optional **real-user monitoring beacon**: ~2 KB, no external libraries or services, loaded for a configurable sample of visits and aggregated to daily p75 on your own site for the pages you track
-* Track the homepage plus as many other URLs as you like, with sparkline trends and pass / warn / fail status pills
+* Track the homepage plus as many other pages of your site as you like, with sparkline trends and pass / warn / fail status pills
 
 = 💰 Performance budgets and incidents =
 

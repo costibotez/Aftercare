@@ -30,7 +30,7 @@ final class Webhook {
 		if ( '' === $url || ! is_array( $incident ) ) {
 			return;
 		}
-		wp_remote_post(
+		wp_safe_remote_post(
 			$url,
 			array(
 				'timeout' => 10,

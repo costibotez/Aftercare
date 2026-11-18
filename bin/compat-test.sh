@@ -223,9 +223,21 @@ NONCE="$( grep -m1 -o 'name="_wpnonce" value="[^"]*"' "$WORK/settings.html" | se
 [ -n "$NONCE" ] || fail 'settings nonce not found'
 REDIRECT="$( curl -s -b "$JAR" -o /dev/null -w '%{redirect_url}' \
 	-d "action=aftercare_save_settings&_wpnonce=$NONCE&rum_enabled=1&rum_sample_rate=100&alert_email=admin@example.com&error_watch=1&availability_watch=1" \
+	--data-urlencode "tracked_urls=$( printf 'http://169.254.169.254/\nhttps://example.com/\n%s/about/' "$BASE" )" \
 	"$BASE/wp-admin/admin-post.php" )"
 [[ "$REDIRECT" == *updated=1* ]] || fail "settings save redirected to '$REDIRECT'"
 echo 'PASS settings save'
+
+# Tracked URLs off this site are refused and listed in a notice, once.
+curl -s -b "$JAR" -o "$WORK/settings.html" "$BASE/wp-admin/admin.php?page=aftercare-settings"
+grep -q 'These tracked URLs were not saved' "$WORK/settings.html" || fail 'no notice for rejected tracked URLs'
+grep -q '<code>http://169.254.169.254/</code>' "$WORK/settings.html" || fail 'notice does not list the metadata address'
+grep -q '<code>https://example.com/</code>' "$WORK/settings.html" || fail 'notice does not list the external URL'
+TRACKED="$( grep -o '<textarea id="ac-urls"[^<]*</textarea>' "$WORK/settings.html" )"
+[[ "$TRACKED" == *"$BASE/about/"* && "$TRACKED" != *169.254* && "$TRACKED" != *example.com* ]] || fail "tracked URLs saved as: $TRACKED"
+curl -s -b "$JAR" -o "$WORK/settings.html" "$BASE/wp-admin/admin.php?page=aftercare-settings"
+grep -q 'These tracked URLs were not saved' "$WORK/settings.html" && fail 'rejected tracked URL notice shown twice'
+echo 'PASS tracked URLs off this site are rejected with a notice'
 
 curl -s -o "$WORK/front.html" "$BASE/"
 grep -q 'id="aftercare-rum-js"' "$WORK/front.html" || fail 'RUM beacon not enqueued'

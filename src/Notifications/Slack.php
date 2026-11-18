@@ -73,7 +73,7 @@ final class Slack {
 		if ( '' === $webhook ) {
 			return;
 		}
-		wp_remote_post(
+		wp_safe_remote_post(
 			$webhook,
 			array(
 				'timeout' => 10,

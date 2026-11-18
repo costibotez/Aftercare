@@ -363,8 +363,70 @@ switch ( $step ) {
 		$incidents   = Aftercare\Core\Plugin::instance()->incidents();
 		$check       = new Aftercare\Errors\AvailabilityCheck();
 		$page        = add_query_arg( 'compat_page', '1', home_url( '/' ) );
-		$unreachable = 'http://127.0.0.1:1/';
+		$unreachable = home_url( '/compat-unreachable/' );
 		$is_open     = static fn( $url ) => $incidents->find_open( $url, 'HTTP', 'availability' );
+		$options     = Aftercare\Core\Options::class;
+
+		// Tracked URLs stay on this site: no other servers, no internal
+		// addresses, no other ports, no credentials.
+		$own_port = (int) ( wp_parse_url( home_url(), PHP_URL_PORT ) ?? 80 );
+		check( $options::is_trackable_url( home_url( '/pricing/' ) ), 'a URL on this site can be tracked' );
+		foreach ( array( 'http://169.254.169.254/', 'https://example.com/', 'http://localhost:6379/', 'http://admin:secret@' . compat_host( home_url() ) . '/', 'ftp://' . compat_host( home_url() ) . '/', 'http://127.0.0.1:' . $own_port . '/' ) as $bad ) {
+			check( ! $options::is_trackable_url( $bad ), "$bad cannot be tracked" );
+		}
+		$allow_shop = static fn( $hosts ) => array_merge( $hosts, array( 'shop.example' ) );
+		add_filter( 'aftercare_allowed_hosts', $allow_shop );
+		check( $options::is_trackable_url( 'https://shop.example/basket/' ), 'a host added with aftercare_allowed_hosts can be tracked' );
+		remove_filter( 'aftercare_allowed_hosts', $allow_shop );
+		$options::update( array( 'tracked_urls' => array( 'http://169.254.169.254/', home_url( '/pricing/' ), 'https://example.com/' ) ) );
+		check( array( home_url( '/' ), home_url( '/pricing/' ) ) === $options::tracked_urls(), 'tracked URLs saved by 1.1.0 for other hosts are dropped' );
+		check( $options::is_https_url( 'https://hooks.slack.com/services/T/B/x' ) && ! $options::is_https_url( 'http://hooks.slack.com/x' ) && ! $options::is_https_url( 'https:///x' ), 'webhook URLs must be https' );
+
+		// Requests: this site may use https_local_ssl_verify; every other
+		// host, including one reached by a redirect, goes through
+		// wp_safe_remote_get() with TLS verified.
+		$hops  = array();
+		$route = static function ( $pre, $args, $url ) use ( &$hops ) {
+			if ( ! str_contains( $url, 'compat-route' ) && ! str_contains( $url, 'shop.example' ) && ! str_contains( $url, '169.254.169.254' ) ) {
+				return $pre;
+			}
+			$hops[] = array(
+				'url'    => $url,
+				'safe'   => ! empty( $args['reject_unsafe_urls'] ),
+				'verify' => $args['sslverify'],
+			);
+			if ( str_contains( $url, '169.254.169.254' ) ) {
+				return $pre; // Left to core, which refuses the address.
+			}
+			if ( str_contains( $url, 'compat-route' ) ) {
+				$to = str_contains( $url, 'metadata' ) ? 'http://169.254.169.254/latest/meta-data/' : 'https://shop.example/landing/';
+				return array(
+					'headers'  => array( 'location' => $to ),
+					'body'     => '',
+					'response' => array( 'code' => 301, 'message' => 'Moved Permanently' ),
+					'cookies'  => array(),
+				);
+			}
+			return array(
+				'headers'  => array( 'content-type' => 'text/html' ),
+				'body'     => '<html></html>',
+				'response' => array( 'code' => 200, 'message' => 'OK' ),
+				'cookies'  => array(),
+			);
+		};
+		add_filter( 'pre_http_request', $route, 10, 3 );
+		$result = $check->check( home_url( '/compat-route/' ) );
+		check( Aftercare\Errors\AvailabilityCheck::OK === $result[0] && 2 === count( $hops ), 'a redirect is followed hop by hop' );
+		check( ! $hops[0]['safe'] && false === $hops[0]['verify'], 'a request to this site keeps https_local_ssl_verify' );
+		check( $hops[1]['safe'] && true === $hops[1]['verify'] && str_starts_with( $hops[1]['url'], 'https://shop.example/' ), 'a redirect to another host is a safe request with TLS verified' );
+		$hops   = array();
+		$result = $check->check( home_url( '/compat-route/metadata/' ) );
+		remove_filter( 'pre_http_request', $route, 10 );
+		check( Aftercare\Errors\AvailabilityCheck::INCONCLUSIVE === $result[0] && 2 === count( $hops ) && $hops[1]['safe'], 'a redirect to an internal address is refused' );
+
+		// A tracked page the server cannot connect to.
+		$refuse = static fn( $pre, $args, $url ) => str_contains( $url, 'compat-unreachable' ) ? new WP_Error( 'http_request_failed', 'cURL error 7: Failed to connect' ) : $pre;
+		add_filter( 'pre_http_request', $refuse, 10, 3 );
 		Aftercare\Core\Options::update( array( 'tracked_urls' => array( $page, $unreachable ) ) );
 		update_option( 'compat_mail_log', array(), false );
 
@@ -401,6 +463,7 @@ switch ( $step ) {
 		check( null !== $is_open( $page ), 'blocked loopback requests leave open incidents alone' );
 		check( 'recommended' === $health->test_availability()['status'], 'Site Health explains blocked loopback requests' );
 
+		remove_filter( 'pre_http_request', $refuse, 10 );
 		Aftercare\Core\Options::update( array( 'tracked_urls' => array() ) );
 		delete_option( 'compat_page_mode' );
 		delete_option( 'compat_mail_log' );
