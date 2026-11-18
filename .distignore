@@ -25,6 +25,9 @@ languages
 .gitignore
 .DS_Store
 README.md
+CODE_OF_CONDUCT.md
+CONTRIBUTING.md
+SECURITY.md
 docs
 composer.json
 composer.lock

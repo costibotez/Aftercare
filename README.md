@@ -185,9 +185,13 @@ git push origin 1.0.4
 
 Watch the **WordPress.org release** workflow in GitHub Actions. The tag must match the plugin header and stable tag; use `1.0.4`, without a `v` prefix. Pushing the tag is the publication step. Published versions are immutable: use a new version for code changes. Readme and directory image changes are included with the next release.
 
+## Contributing
+
+Contributions are welcome. Please read the [contributing guide](CONTRIBUTING.md) and the [code of conduct](CODE_OF_CONDUCT.md) before you open an issue or a pull request. To report a vulnerability privately, follow the [security policy](SECURITY.md).
+
 ## License
 
-GPL-2.0-or-later.
+GPL-2.0-or-later. See [LICENSE](LICENSE) for the full text.
 
 ---
 
