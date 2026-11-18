@@ -17,7 +17,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/WordPress-6.4%2B-21759b?logo=wordpress&logoColor=white" alt="WordPress 6.4+" />
   <img src="https://img.shields.io/badge/PHP-8.1%2B-777bb4?logo=php&logoColor=white" alt="PHP 8.1+" />
-  <img src="https://img.shields.io/badge/Version-1.1.0-d97706" alt="Version 1.1.0" />
+  <img src="https://img.shields.io/badge/Version-1.1.1-d97706" alt="Version 1.1.1" />
   <img src="https://img.shields.io/badge/License-GPL--2.0--or--later-0f766e" alt="License GPL-2.0-or-later" />
 </p>
 
@@ -157,6 +157,8 @@ Useful hooks:
 | `aftercare_lab_change_checks_per_day` | filter | Cap on lab re-tests after changes (default 4 a day) |
 | `aftercare_php_error` | action | A fatal error signature was seen for the first time, or again after a quiet day |
 | `aftercare_availability_max_urls` | filter | URLs per availability check (default 6) |
+| `aftercare_allowed_hosts` | filter | Hosts tracked URLs may point at (default: the site and WordPress address hosts) |
+| `aftercare_rum_rate_limit` | filter | RUM beacons one IP address may send per minute (default 30; 0 turns the limit off) |
 
 QA shortcut: **Dashboard → Run daily checks now** runs the full daily pipeline (CrUX pull → RUM aggregation → breach detection → retention) on demand. Lower a budget below the current value and run it to force an incident and the alert email.
 

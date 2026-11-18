@@ -4,7 +4,7 @@ Tags: core web vitals, performance, monitoring, activity log, client reports
 Requires at least: 6.4
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.1.0
+Stable tag: 1.1.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -116,6 +116,21 @@ Yes. `wp aftercare run` executes the full daily pipeline (CrUX pull, RUM aggrega
 
 == Changelog ==
 
+= 1.1.1 =
+Security and robustness release from an audit of 1.1.0.
+
+* Security: the real-user monitoring endpoint only records pages you track. Beacons for any other address are ignored before anything is written, so a script posting made-up addresses can no longer grow the database
+* Security: beacons are kept in their own table, one row each, instead of one shared settings row rewritten on every visit. This removes lost updates and lock contention on busy sites. Each page and metric keeps at most 500 values a day, request bodies over 1 KB are refused and each IP address may send 30 beacons a minute (filter `aftercare_rum_rate_limit`)
+* Security: page addresses are normalised before matching, so /page, /page/ and /page/?utm_source=x count as one page. The beacon no longer sends the query string
+* Security: the change ledger CSV export prefixes an apostrophe to cells starting with =, +, -, @, a tab or a carriage return, so post titles and display names cannot run as spreadsheet formulas. The export now streams in pages of 1,000 rows instead of loading the whole ledger into memory
+* Security: tracked URLs must be on this site (the hosts of the site address and the WordPress address, or domains added with the new `aftercare_allowed_hosts` filter). Other lines are refused with a notice when you save, and tracked URLs saved earlier for other hosts are no longer requested
+* Security: the availability check follows redirects one hop at a time. Only requests to this site use the `https_local_ssl_verify` setting; any other host goes through the WordPress safe request functions with TLS always verified
+* Security: Slack and webhook URLs must be https URLs and are sent to with the WordPress safe request functions
+* Security: the Google API key and the Slack and webhook URLs are no longer written into the settings page. Their fields show a "Saved" placeholder, a blank field keeps the stored value and a checkbox removes it
+* Security: stored PHP error messages are scrubbed of passwords, tokens, keys and database user and host names, and the WordPress root path is shown as ~/
+* Documented that the availability check adds an `aftercare_check` parameter to get past page caches, so each hourly request reaches your server
+* Database upgrade runs automatically: one new table for real-user monitoring beacons. Values buffered by 1.1.0 are kept
+
 = 1.1.0 =
 * New: daily Lighthouse lab checks through the PageSpeed Insights API with your existing Google key (LCP, CLS, TTFB and Total Blocking Time), shown separately from field data. Sites with too little traffic for the Chrome UX Report now get data too
 * New: lab incidents open when a reading is clearly worse than its 28-day lab baseline, the same day it is measured
@@ -158,6 +173,9 @@ Yes. `wp aftercare run` executes the full daily pipeline (CrUX pull, RUM aggrega
 * Pro: cause attribution, white-label client reports, Slack/webhooks, extended retention
 
 == Upgrade Notice ==
+
+= 1.1.1 =
+Security hardening for real-user monitoring, the CSV export, tracked URLs, webhooks, stored secrets and error messages. Tracked URLs on other domains are no longer checked; allow extra domains with the aftercare_allowed_hosts filter.
 
 = 1.1.0 =
 Adds lab checks, re-tests after updates, fatal error tracking and an availability check. The database upgrades automatically and existing data and settings are kept. Lab checks need the PageSpeed Insights API enabled for your Google key.
