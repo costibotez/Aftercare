@@ -4,10 +4,11 @@
  * install. Each step loads WordPress, exercises the plugin and exits non-zero
  * on the first failed assertion.
  *
- * Usage: php checks.php <wordpress-dir> <step> [csv-file]
+ * Usage: php checks.php <wordpress-dir> <step> [arguments]
  *
- * Steps: install, activate, flow, ledger_seed, ledger_csv, errors,
- * availability, rum, teardown.
+ * Steps: install, activate, flow, secret, ledger_seed, ledger_csv, errors,
+ * availability, rum, teardown. The secret step takes a settings key and the
+ * value it should hold; ledger_csv takes the exported file.
  */
 
 if ( 'cli' !== PHP_SAPI ) {
@@ -274,6 +275,11 @@ switch ( $step ) {
 		// The key stays set and the error stays recorded, so the screens and
 		// Site Health checked over HTTP next render the lab section and the
 		// failing lab test.
+		break;
+
+	case 'secret':
+		$key = $argv[3] ?? '';
+		check( ( $argv[4] ?? '' ) === (string) Aftercare\Core\Options::get( $key ), "$key holds " . wp_json_encode( $argv[4] ?? '' ) );
 		break;
 
 	case 'ledger_seed':

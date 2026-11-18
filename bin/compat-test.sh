@@ -221,10 +221,14 @@ echo 'PASS admin bar item on the front end'
 curl -s -b "$JAR" -o "$WORK/settings.html" "$BASE/wp-admin/admin.php?page=aftercare-settings"
 NONCE="$( grep -m1 -o 'name="_wpnonce" value="[^"]*"' "$WORK/settings.html" | sed 's/.*value="//;s/"$//' )"
 [ -n "$NONCE" ] || fail 'settings nonce not found'
-REDIRECT="$( curl -s -b "$JAR" -o /dev/null -w '%{redirect_url}' \
-	-d "action=aftercare_save_settings&_wpnonce=$NONCE&rum_enabled=1&rum_sample_rate=100&alert_email=admin@example.com&error_watch=1&availability_watch=1" \
-	--data-urlencode "tracked_urls=$( printf 'http://169.254.169.254/\nhttps://example.com/\n%s/about/' "$BASE" )" \
-	"$BASE/wp-admin/admin-post.php" )"
+# Saves the form as a browser would; extra fields come as curl arguments.
+save_settings() {
+	curl -s -b "$JAR" -o /dev/null -w '%{redirect_url}' \
+		-d "action=aftercare_save_settings&_wpnonce=$NONCE&rum_enabled=1&rum_sample_rate=100&alert_email=admin@example.com&error_watch=1&availability_watch=1" \
+		--data-urlencode "tracked_urls=$( printf 'http://169.254.169.254/\nhttps://example.com/\n%s/about/' "$BASE" )" \
+		"$@" "$BASE/wp-admin/admin-post.php"
+}
+REDIRECT="$( save_settings -d 'api_key=' )"
 [[ "$REDIRECT" == *updated=1* ]] || fail "settings save redirected to '$REDIRECT'"
 echo 'PASS settings save'
 
@@ -238,6 +242,21 @@ TRACKED="$( grep -o '<textarea id="ac-urls"[^<]*</textarea>' "$WORK/settings.htm
 curl -s -b "$JAR" -o "$WORK/settings.html" "$BASE/wp-admin/admin.php?page=aftercare-settings"
 grep -q 'These tracked URLs were not saved' "$WORK/settings.html" && fail 'rejected tracked URL notice shown twice'
 echo 'PASS tracked URLs off this site are rejected with a notice'
+
+# The API key never reaches the page. The flow step stored compat-test-key
+# and the save above left the field blank, which keeps it.
+grep -q 'compat-test-key' "$WORK/settings.html" && fail 'settings page HTML contains the API key'
+grep -q 'name="api_key" value="" .*placeholder="Saved. Leave blank to keep it."' "$WORK/settings.html" || fail 'API key field is not empty with a saved placeholder'
+php "$CHECKS" "$WP_DIR" secret api_key compat-test-key
+save_settings --data-urlencode 'api_key=compat-new-key' > /dev/null
+curl -s -b "$JAR" -o "$WORK/settings.html" "$BASE/wp-admin/admin.php?page=aftercare-settings"
+grep -q 'compat-new-key' "$WORK/settings.html" && fail 'settings page HTML contains the new API key'
+php "$CHECKS" "$WP_DIR" secret api_key compat-new-key
+save_settings -d 'api_key=&api_key_remove=1' > /dev/null
+curl -s -b "$JAR" -o "$WORK/settings.html" "$BASE/wp-admin/admin.php?page=aftercare-settings"
+grep -q 'Leave blank to keep it' "$WORK/settings.html" && fail 'removed API key still shows as saved'
+php "$CHECKS" "$WP_DIR" secret api_key ''
+echo 'PASS API key kept out of the settings page, kept when blank, replaced and removed'
 
 curl -s -o "$WORK/front.html" "$BASE/"
 grep -q 'id="aftercare-rum-js"' "$WORK/front.html" || fail 'RUM beacon not enqueued'

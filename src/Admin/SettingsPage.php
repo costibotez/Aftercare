@@ -43,7 +43,7 @@ final class SettingsPage {
 		echo '<table class="form-table" role="presentation">';
 
 		echo '<tr><th scope="row"><label for="ac-api-key">' . esc_html__( 'Google API key', 'aftercare' ) . '</label></th><td>';
-		echo '<input type="password" id="ac-api-key" name="api_key" value="' . esc_attr( (string) $options['api_key'] ) . '" class="regular-text" autocomplete="off" />';
+		self::render_secret_input( 'api_key', 'ac-api-key', 'password', '' !== (string) $options['api_key'], __( 'Remove key', 'aftercare' ) );
 		echo '<p class="description">' . wp_kses_post( __( 'Your own key for the Chrome UX Report API. Create one in the <a href="https://console.cloud.google.com/apis/library/chromeuxreport.googleapis.com" target="_blank" rel="noopener">Google Cloud Console</a> (free tier is plenty). Aftercare only calls Google with your key — nothing is sent anywhere else.', 'aftercare' ) ) . '</p>';
 		echo '</td></tr>';
 
@@ -114,11 +114,11 @@ final class SettingsPage {
 
 		if ( $has_notifiers ) {
 			echo '<tr><th scope="row"><label for="ac-slack">' . esc_html__( 'Slack webhook URL', 'aftercare' ) . '</label></th><td>';
-			echo '<input type="url" id="ac-slack" name="slack_webhook" value="' . esc_attr( (string) $options['slack_webhook'] ) . '" class="regular-text" />';
+			self::render_secret_input( 'slack_webhook', 'ac-slack', 'url', '' !== (string) $options['slack_webhook'], __( 'Remove Slack webhook', 'aftercare' ) );
 			echo '</td></tr>';
 
 			echo '<tr><th scope="row"><label for="ac-webhook">' . esc_html__( 'Generic webhook URL', 'aftercare' ) . '</label></th><td>';
-			echo '<input type="url" id="ac-webhook" name="webhook_url" value="' . esc_attr( (string) $options['webhook_url'] ) . '" class="regular-text" />';
+			self::render_secret_input( 'webhook_url', 'ac-webhook', 'url', '' !== (string) $options['webhook_url'], __( 'Remove webhook', 'aftercare' ) );
 			echo '<p class="description">' . esc_html__( 'Incidents are POSTed as JSON.', 'aftercare' ) . '</p>';
 			echo '</td></tr>';
 		}
@@ -168,6 +168,35 @@ final class SettingsPage {
 		echo '</form>';
 
 		Menu::footer();
+	}
+
+	/**
+	 * A field for a stored secret (the API key or a webhook URL). The saved
+	 * value is never written into the page, where it would show in the page
+	 * source, browser autofill and anything that captures the HTML. The field
+	 * renders empty: leaving it blank keeps the saved value, and a checkbox
+	 * removes it.
+	 *
+	 * @param string $name         Field and settings key.
+	 * @param string $id           Element id.
+	 * @param string $type         Input type.
+	 * @param bool   $saved        Whether a value is stored.
+	 * @param string $remove_label Label of the remove checkbox.
+	 */
+	private static function render_secret_input( string $name, string $id, string $type, bool $saved, string $remove_label ): void {
+		printf(
+			'<input type="%1$s" id="%2$s" name="%3$s" value="" class="regular-text" autocomplete="%4$s" spellcheck="false"%5$s />',
+			esc_attr( $type ),
+			esc_attr( $id ),
+			esc_attr( $name ),
+			// Stops browsers filling in the login password, which a blank
+			// field would otherwise save in place of the key.
+			'password' === $type ? 'new-password' : 'off',
+			$saved ? ' placeholder="' . esc_attr__( 'Saved. Leave blank to keep it.', 'aftercare' ) . '"' : ''
+		);
+		if ( $saved ) {
+			echo ' <label><input type="checkbox" name="' . esc_attr( $name . '_remove' ) . '" value="1" /> ' . esc_html( $remove_label ) . '</label>';
+		}
 	}
 
 	/**
@@ -250,6 +279,15 @@ final class SettingsPage {
 			}
 		}
 
+		// Secrets are never shown in the form: blank keeps the stored value.
+		$stored  = Options::all();
+		$api_key = sanitize_text_field( wp_unslash( $_POST['api_key'] ?? '' ) );
+		if ( ! empty( $_POST['api_key_remove'] ) ) {
+			$api_key = '';
+		} elseif ( '' === $api_key ) {
+			$api_key = (string) $stored['api_key'];
+		}
+
 		$budgets_in = (array) wp_unslash( $_POST['budgets'] ?? array() );
 		$budgets    = array();
 		foreach ( array_keys( Options::defaults()['budgets'] ) as $metric ) {
@@ -257,7 +295,7 @@ final class SettingsPage {
 		}
 
 		$new = array(
-			'api_key'                => sanitize_text_field( wp_unslash( $_POST['api_key'] ?? '' ) ),
+			'api_key'                => $api_key,
 			'tracked_urls'           => $urls,
 			'budgets'                => $budgets,
 			'rum_enabled'            => ! empty( $_POST['rum_enabled'] ),
@@ -276,8 +314,10 @@ final class SettingsPage {
 			foreach ( array( 'slack_webhook', 'webhook_url' ) as $key ) {
 				$value = trim( (string) wp_unslash( $_POST[ $key ] ?? '' ) );
 				$url   = esc_url_raw( $value );
-				if ( '' === $value ) {
+				if ( ! empty( $_POST[ $key . '_remove' ] ) ) {
 					$new[ $key ] = '';
+				} elseif ( '' === $value ) {
+					$new[ $key ] = (string) $stored[ $key ];
 				} elseif ( '' !== $url && Options::is_https_url( $url ) ) {
 					$new[ $key ] = $url;
 				} else {
