@@ -1,6 +1,7 @@
 <?php
 namespace Aftercare\Admin;
 
+use Aftercare\Core\Util;
 use Aftercare\Ledger\Repository as LedgerRepository;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -13,6 +14,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class LedgerPage {
 
 	private const PER_PAGE = 50;
+
+	/** Rows read from the database per page of the CSV export. */
+	private const EXPORT_PAGE = 1000;
 
 	private const TYPE_ICONS = array(
 		'plugin_update'     => 'dashicons-update',
@@ -143,7 +147,8 @@ final class LedgerPage {
 	}
 
 	/**
-	 * Stream the full ledger as CSV.
+	 * Stream the full ledger as CSV, a page of rows at a time so memory use
+	 * stays flat however long the ledger is.
 	 */
 	public static function handle_export(): void {
 		if ( ! current_user_can( Menu::CAP ) ) {
@@ -152,32 +157,49 @@ final class LedgerPage {
 		check_admin_referer( 'aftercare_ledger_export' );
 
 		$ledger = new LedgerRepository();
-		$events = $ledger->query( array(), 100000 );
 
 		header( 'Content-Type: text/csv; charset=utf-8' );
 		header( 'Content-Disposition: attachment; filename=aftercare-ledger-' . gmdate( 'Y-m-d' ) . '.csv' );
 
 		$out = fopen( 'php://output', 'w' );
-		// An empty escape character gives RFC 4180 output (quotes are only
-		// ever doubled), which JSON payloads containing \" need. PHP 8.4
-		// also deprecates leaving the argument out.
-		fputcsv( $out, array( 'occurred_at', 'event_type', 'summary', 'actor', 'payload' ), ',', '"', '' );
-		foreach ( $events as $event ) {
-			fputcsv(
-				$out,
-				array(
-					$event['occurred_at'],
-					$event['event_type'],
-					$event['summary'],
-					$event['actor_label'],
-					$event['payload'],
-				),
-				',',
-				'"',
-				''
-			);
-		}
+		self::csv_row( $out, array( 'occurred_at', 'event_type', 'summary', 'actor', 'payload' ) );
+		$page = 1;
+		do {
+			$events = $ledger->query( array(), self::EXPORT_PAGE, $page );
+			foreach ( $events as $event ) {
+				// Summaries, actor names and payloads hold text other users
+				// control (post titles, display names, plugin names), so every
+				// cell is made safe to open in a spreadsheet.
+				self::csv_row(
+					$out,
+					array(
+						$event['occurred_at'],
+						$event['event_type'],
+						$event['summary'],
+						$event['actor_label'],
+						$event['payload'],
+					)
+				);
+			}
+			fflush( $out );
+			flush();
+			$full_page = count( $events ) === self::EXPORT_PAGE;
+			++$page;
+		} while ( $full_page );
 		fclose( $out ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose
 		exit;
+	}
+
+	/**
+	 * Writes one CSV row with every cell made spreadsheet-safe. An empty
+	 * escape character gives RFC 4180 output (quotes are only ever doubled),
+	 * which JSON payloads containing \" need. PHP 8.4 also deprecates leaving
+	 * the argument out.
+	 *
+	 * @param resource          $out   Output stream.
+	 * @param array<int, mixed> $cells Cell values.
+	 */
+	private static function csv_row( $out, array $cells ): void {
+		fputcsv( $out, array_map( array( Util::class, 'csv_safe' ), $cells ), ',', '"', '' );
 	}
 }

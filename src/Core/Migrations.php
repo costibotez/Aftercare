@@ -10,7 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 final class Migrations {
 
-	public const SCHEMA_VERSION        = '1.3.0';
+	public const SCHEMA_VERSION        = '1.4.0';
 	public const SCHEMA_VERSION_OPTION = 'aftercare_schema_version';
 
 	public static function maybe_upgrade(): void {
@@ -113,6 +113,21 @@ final class Migrations {
 			) {$charset};"
 		);
 
+		// Real-user beacons waiting for the daily aggregation. One row per
+		// value, so a beacon is a single-row INSERT and never rewrites
+		// anything shared with other visitors.
+		dbDelta(
+			"CREATE TABLE {$prefix}rum_buffer (
+				id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+				day DATE NOT NULL,
+				url_hash CHAR(32) NOT NULL,
+				metric VARCHAR(10) NOT NULL,
+				value DECIMAL(10,3) NOT NULL DEFAULT 0,
+				PRIMARY KEY  (id),
+				KEY day_url_metric (day, url_hash, metric)
+			) {$charset};"
+		);
+
 		update_option( self::SCHEMA_VERSION_OPTION, self::SCHEMA_VERSION, false );
 	}
 
@@ -128,6 +143,7 @@ final class Migrations {
 			$prefix . 'incidents',
 			$prefix . 'reports',
 			$prefix . 'errors',
+			$prefix . 'rum_buffer',
 		);
 	}
 }

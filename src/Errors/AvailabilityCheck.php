@@ -36,6 +36,7 @@ final class AvailabilityCheck {
 
 	private const FAILURES_TO_OPEN = 2;
 	private const CONFIRM_SECONDS  = 2 * MINUTE_IN_SECONDS;
+	private const MAX_REDIRECTS    = 5;
 
 	public const OK           = 'ok';
 	public const FAIL         = 'fail';
@@ -129,17 +130,9 @@ final class AvailabilityCheck {
 	 * @return array{0: string, 1: int, 2: string} Verdict, HTTP status, detail.
 	 */
 	public function check( string $url ): array {
-		$response = wp_remote_get(
-			add_query_arg( 'aftercare_check', time(), $url ), // Past any page cache.
-			array(
-				'timeout'     => 10,
-				'redirection' => 5,
-				/** This filter is documented in wp-includes/class-wp-http-streams.php */
-				'sslverify'   => apply_filters( 'https_local_ssl_verify', false ),
-				'headers'     => array( 'Cache-Control' => 'no-cache' ),
-				'user-agent'  => 'Aftercare availability check; ' . home_url( '/' ),
-			)
-		);
+		// The query argument gets past page caches and CDNs, so every check
+		// reaches the origin server. The readme documents this.
+		$response = self::fetch( add_query_arg( 'aftercare_check', time(), $url ) );
 
 		if ( is_wp_error( $response ) ) {
 			return array( self::INCONCLUSIVE, 0, $response->get_error_message() );
@@ -160,6 +153,50 @@ final class AvailabilityCheck {
 			return array( self::FAIL, 200, '' );
 		}
 		return array( self::OK, 200, '' );
+	}
+
+	/**
+	 * GETs a URL and follows up to MAX_REDIRECTS redirects one hop at a time,
+	 * so each hop is judged on its own host. Only this site's own host may
+	 * skip TLS verification through https_local_ssl_verify, as core's
+	 * loopback requests do; any other host goes through
+	 * wp_safe_remote_get(), which refuses internal addresses, with TLS
+	 * always verified.
+	 *
+	 * @param string $url URL to request.
+	 * @return array<string, mixed>|\WP_Error Response, or an error.
+	 */
+	private static function fetch( string $url ) {
+		for ( $hop = 0; $hop <= self::MAX_REDIRECTS; $hop++ ) {
+			$args = array(
+				'timeout'     => 10,
+				'redirection' => 0,
+				'headers'     => array( 'Cache-Control' => 'no-cache' ),
+				'user-agent'  => 'Aftercare availability check; ' . home_url( '/' ),
+			);
+			if ( Options::is_home_url( $url ) ) {
+				/** This filter is documented in wp-includes/class-wp-http-streams.php */
+				$args['sslverify'] = apply_filters( 'https_local_ssl_verify', false );
+				$response          = wp_remote_get( $url, $args );
+			} elseif ( Util::is_internal_host( $url ) ) {
+				return new \WP_Error( 'http_request_failed', __( 'Refused a request to an internal address.', 'aftercare' ) );
+			} else {
+				$args['sslverify'] = true;
+				$response          = wp_safe_remote_get( $url, $args );
+			}
+
+			if ( is_wp_error( $response ) ) {
+				return $response;
+			}
+			$status   = (int) wp_remote_retrieve_response_code( $response );
+			$location = wp_remote_retrieve_header( $response, 'location' );
+			$location = is_array( $location ) ? (string) end( $location ) : (string) $location;
+			if ( $status < 300 || $status >= 400 || '' === $location ) {
+				return $response;
+			}
+			$url = \WP_Http::make_absolute_url( $location, $url );
+		}
+		return new \WP_Error( 'http_request_failed', __( 'Too many redirects.', 'aftercare' ) );
 	}
 
 	private function open( IncidentRepository $incidents, string $url, int $status ): void {

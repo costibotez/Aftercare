@@ -221,11 +221,42 @@ echo 'PASS admin bar item on the front end'
 curl -s -b "$JAR" -o "$WORK/settings.html" "$BASE/wp-admin/admin.php?page=aftercare-settings"
 NONCE="$( grep -m1 -o 'name="_wpnonce" value="[^"]*"' "$WORK/settings.html" | sed 's/.*value="//;s/"$//' )"
 [ -n "$NONCE" ] || fail 'settings nonce not found'
-REDIRECT="$( curl -s -b "$JAR" -o /dev/null -w '%{redirect_url}' \
-	-d "action=aftercare_save_settings&_wpnonce=$NONCE&rum_enabled=1&rum_sample_rate=100&alert_email=admin@example.com&error_watch=1&availability_watch=1" \
-	"$BASE/wp-admin/admin-post.php" )"
+# Saves the form as a browser would; extra fields come as curl arguments.
+save_settings() {
+	curl -s -b "$JAR" -o /dev/null -w '%{redirect_url}' \
+		-d "action=aftercare_save_settings&_wpnonce=$NONCE&rum_enabled=1&rum_sample_rate=100&alert_email=admin@example.com&error_watch=1&availability_watch=1" \
+		--data-urlencode "tracked_urls=$( printf 'http://169.254.169.254/\nhttps://example.com/\n%s/about/' "$BASE" )" \
+		"$@" "$BASE/wp-admin/admin-post.php"
+}
+REDIRECT="$( save_settings -d 'api_key=' )"
 [[ "$REDIRECT" == *updated=1* ]] || fail "settings save redirected to '$REDIRECT'"
 echo 'PASS settings save'
+
+# Tracked URLs off this site are refused and listed in a notice, once.
+curl -s -b "$JAR" -o "$WORK/settings.html" "$BASE/wp-admin/admin.php?page=aftercare-settings"
+grep -q 'These tracked URLs were not saved' "$WORK/settings.html" || fail 'no notice for rejected tracked URLs'
+grep -q '<code>http://169.254.169.254/</code>' "$WORK/settings.html" || fail 'notice does not list the metadata address'
+grep -q '<code>https://example.com/</code>' "$WORK/settings.html" || fail 'notice does not list the external URL'
+TRACKED="$( grep -o '<textarea id="ac-urls"[^<]*</textarea>' "$WORK/settings.html" )"
+[[ "$TRACKED" == *"$BASE/about/"* && "$TRACKED" != *169.254* && "$TRACKED" != *example.com* ]] || fail "tracked URLs saved as: $TRACKED"
+curl -s -b "$JAR" -o "$WORK/settings.html" "$BASE/wp-admin/admin.php?page=aftercare-settings"
+grep -q 'These tracked URLs were not saved' "$WORK/settings.html" && fail 'rejected tracked URL notice shown twice'
+echo 'PASS tracked URLs off this site are rejected with a notice'
+
+# The API key never reaches the page. The flow step stored compat-test-key
+# and the save above left the field blank, which keeps it.
+grep -q 'compat-test-key' "$WORK/settings.html" && fail 'settings page HTML contains the API key'
+grep -q 'name="api_key" value="" .*placeholder="Saved. Leave blank to keep it."' "$WORK/settings.html" || fail 'API key field is not empty with a saved placeholder'
+php "$CHECKS" "$WP_DIR" secret api_key compat-test-key
+save_settings --data-urlencode 'api_key=compat-new-key' > /dev/null
+curl -s -b "$JAR" -o "$WORK/settings.html" "$BASE/wp-admin/admin.php?page=aftercare-settings"
+grep -q 'compat-new-key' "$WORK/settings.html" && fail 'settings page HTML contains the new API key'
+php "$CHECKS" "$WP_DIR" secret api_key compat-new-key
+save_settings -d 'api_key=&api_key_remove=1' > /dev/null
+curl -s -b "$JAR" -o "$WORK/settings.html" "$BASE/wp-admin/admin.php?page=aftercare-settings"
+grep -q 'Leave blank to keep it' "$WORK/settings.html" && fail 'removed API key still shows as saved'
+php "$CHECKS" "$WP_DIR" secret api_key ''
+echo 'PASS API key kept out of the settings page, kept when blank, replaced and removed'
 
 curl -s -o "$WORK/front.html" "$BASE/"
 grep -q 'id="aftercare-rum-js"' "$WORK/front.html" || fail 'RUM beacon not enqueued'
@@ -237,13 +268,17 @@ rum() {
 [ "$( rum "{\"metric\":\"LCP\",\"value\":1800,\"url\":\"$BASE/\"}" )" = 204 ] || fail 'RUM endpoint rejected a valid reading'
 [ "$( rum '{"metric":"XYZ","value":1,"url":"x"}' )" = 400 ] || fail 'RUM endpoint accepted an invalid metric'
 echo 'PASS RUM endpoint validates input'
+[ "$( rum "{\"metric\":\"LCP\",\"value\":1800,\"url\":\"$BASE/$( printf '%01100d' 0 )\"}" )" = 413 ] || fail 'RUM endpoint accepted a body over 1 KB'
+echo 'PASS RUM endpoint rejects oversized bodies'
 
+php "$CHECKS" "$WP_DIR" ledger_seed
 curl -s -b "$JAR" -o "$WORK/ledger.html" "$BASE/wp-admin/admin.php?page=aftercare-ledger"
 EXPORT="$( grep -m1 -o 'admin-post.php?action=aftercare_ledger_export[^"]*' "$WORK/ledger.html" | sed 's/&#038;/\&/g; s/&amp;/\&/g' )"
 [ -n "$EXPORT" ] || fail 'ledger export link not found'
 curl -s -b "$JAR" -o "$WORK/ledger.csv" "$BASE/wp-admin/$EXPORT"
 head -1 "$WORK/ledger.csv" | grep -q '^occurred_at,event_type,summary' || fail 'ledger CSV export'
 echo 'PASS ledger CSV export'
+php "$CHECKS" "$WP_DIR" ledger_csv "$WORK/ledger.csv"
 
 # Fatal errors: one while plugins load, two early ones and one late one.
 for mode in boot early early late; do
@@ -251,6 +286,7 @@ for mode in boot early early late; do
 done
 php "$CHECKS" "$WP_DIR" errors
 php "$CHECKS" "$WP_DIR" availability
+php "$CHECKS" "$WP_DIR" rum
 
 # Every incident kind now exists: render each detail page and the error list.
 page 'admin.php?page=aftercare-errors' 200

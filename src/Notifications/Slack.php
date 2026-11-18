@@ -70,10 +70,10 @@ final class Slack {
 
 	private function post( string $text ): void {
 		$webhook = esc_url_raw( (string) Options::get( 'slack_webhook' ) );
-		if ( '' === $webhook ) {
+		if ( '' === $webhook || Util::is_internal_host( $webhook ) ) {
 			return;
 		}
-		wp_remote_post(
+		wp_safe_remote_post(
 			$webhook,
 			array(
 				'timeout' => 10,

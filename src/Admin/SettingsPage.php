@@ -16,6 +16,9 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 final class SettingsPage {
 
+	/** Per-user transient holding what the last save refused. */
+	private const REJECTED_TRANSIENT = 'aftercare_settings_rejected_';
+
 	public function render(): void {
 		$options = Options::all();
 
@@ -30,6 +33,7 @@ final class SettingsPage {
 		if ( isset( $_GET['updated'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'Settings saved.', 'aftercare' ) . '</p></div>';
 		}
+		self::render_rejected_notice( $options );
 
 		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
 		echo '<input type="hidden" name="action" value="aftercare_save_settings" />';
@@ -39,7 +43,7 @@ final class SettingsPage {
 		echo '<table class="form-table" role="presentation">';
 
 		echo '<tr><th scope="row"><label for="ac-api-key">' . esc_html__( 'Google API key', 'aftercare' ) . '</label></th><td>';
-		echo '<input type="password" id="ac-api-key" name="api_key" value="' . esc_attr( (string) $options['api_key'] ) . '" class="regular-text" autocomplete="off" />';
+		self::render_secret_input( 'api_key', 'ac-api-key', 'password', '' !== (string) $options['api_key'], __( 'Remove key', 'aftercare' ) );
 		echo '<p class="description">' . wp_kses_post( __( 'Your own key for the Chrome UX Report API. Create one in the <a href="https://console.cloud.google.com/apis/library/chromeuxreport.googleapis.com" target="_blank" rel="noopener">Google Cloud Console</a> (free tier is plenty). Aftercare only calls Google with your key — nothing is sent anywhere else.', 'aftercare' ) ) . '</p>';
 		echo '</td></tr>';
 
@@ -48,7 +52,7 @@ final class SettingsPage {
 		echo '<p class="description">';
 		printf(
 			/* translators: %s: homepage URL */
-			esc_html__( 'One per line. The homepage (%s) is always tracked, and there is no limit on how many more you add.', 'aftercare' ),
+			esc_html__( 'One per line, on this site. The homepage (%s) is always tracked, and there is no limit on how many more you add.', 'aftercare' ),
 			esc_html( home_url( '/' ) )
 		);
 		echo '</p></td></tr>';
@@ -110,11 +114,11 @@ final class SettingsPage {
 
 		if ( $has_notifiers ) {
 			echo '<tr><th scope="row"><label for="ac-slack">' . esc_html__( 'Slack webhook URL', 'aftercare' ) . '</label></th><td>';
-			echo '<input type="url" id="ac-slack" name="slack_webhook" value="' . esc_attr( (string) $options['slack_webhook'] ) . '" class="regular-text" />';
+			self::render_secret_input( 'slack_webhook', 'ac-slack', 'url', '' !== (string) $options['slack_webhook'], __( 'Remove Slack webhook', 'aftercare' ) );
 			echo '</td></tr>';
 
 			echo '<tr><th scope="row"><label for="ac-webhook">' . esc_html__( 'Generic webhook URL', 'aftercare' ) . '</label></th><td>';
-			echo '<input type="url" id="ac-webhook" name="webhook_url" value="' . esc_attr( (string) $options['webhook_url'] ) . '" class="regular-text" />';
+			self::render_secret_input( 'webhook_url', 'ac-webhook', 'url', '' !== (string) $options['webhook_url'], __( 'Remove webhook', 'aftercare' ) );
 			echo '<p class="description">' . esc_html__( 'Incidents are POSTed as JSON.', 'aftercare' ) . '</p>';
 			echo '</td></tr>';
 		}
@@ -166,6 +170,92 @@ final class SettingsPage {
 		Menu::footer();
 	}
 
+	/**
+	 * A field for a stored secret (the API key or a webhook URL). The saved
+	 * value is never written into the page, where it would show in the page
+	 * source, browser autofill and anything that captures the HTML. The field
+	 * renders empty: leaving it blank keeps the saved value, and a checkbox
+	 * removes it.
+	 *
+	 * @param string $name         Field and settings key.
+	 * @param string $id           Element id.
+	 * @param string $type         Input type.
+	 * @param bool   $saved        Whether a value is stored.
+	 * @param string $remove_label Label of the remove checkbox.
+	 */
+	private static function render_secret_input( string $name, string $id, string $type, bool $saved, string $remove_label ): void {
+		printf(
+			'<input type="%1$s" id="%2$s" name="%3$s" value="" class="regular-text" autocomplete="%4$s" spellcheck="false"%5$s />',
+			esc_attr( $type ),
+			esc_attr( $id ),
+			esc_attr( $name ),
+			// Stops browsers filling in the login password, which a blank
+			// field would otherwise save in place of the key.
+			'password' === $type ? 'new-password' : 'off',
+			$saved ? ' placeholder="' . esc_attr__( 'Saved. Leave blank to keep it.', 'aftercare' ) . '"' : ''
+		);
+		if ( $saved ) {
+			echo ' <label><input type="checkbox" name="' . esc_attr( $name . '_remove' ) . '" value="1" /> ' . esc_html( $remove_label ) . '</label>';
+		}
+	}
+
+	/**
+	 * Lists what the last save refused, and any tracked URLs saved by an
+	 * earlier version that are no longer checked because they point
+	 * elsewhere.
+	 *
+	 * @param array<string, mixed> $options Current settings.
+	 */
+	private static function render_rejected_notice( array $options ): void {
+		$key      = self::REJECTED_TRANSIENT . get_current_user_id();
+		$rejected = get_transient( $key );
+		$rejected = is_array( $rejected ) ? $rejected : array();
+		delete_transient( $key );
+
+		$hosts = implode( ', ', Options::allowed_hosts() );
+		if ( ! empty( $rejected['tracked_urls'] ) ) {
+			echo '<div class="notice notice-error"><p>';
+			printf(
+				/* translators: %s: comma-separated host names */
+				esc_html__( 'These tracked URLs were not saved. Aftercare requests tracked URLs from the server, so they must be http or https addresses on this site (%s):', 'aftercare' ),
+				esc_html( $hosts )
+			);
+			echo '</p><ul class="ul-disc">';
+			foreach ( (array) $rejected['tracked_urls'] as $line ) {
+				echo '<li><code>' . esc_html( (string) $line ) . '</code></li>';
+			}
+			echo '</ul><p>' . esc_html__( 'Another domain this site serves can be allowed with the aftercare_allowed_hosts filter.', 'aftercare' ) . '</p></div>';
+		}
+
+		$labels = array(
+			'slack_webhook' => __( 'The Slack webhook URL was not changed: it must be an https URL.', 'aftercare' ),
+			'webhook_url'   => __( 'The generic webhook URL was not changed: it must be an https URL.', 'aftercare' ),
+		);
+		foreach ( $labels as $field => $message ) {
+			if ( ! empty( $rejected[ $field ] ) ) {
+				echo '<div class="notice notice-error"><p>' . esc_html( $message ) . '</p></div>';
+			}
+		}
+
+		$stale = array_filter(
+			(array) $options['tracked_urls'],
+			static fn( $url ) => ! Options::is_trackable_url( esc_url_raw( (string) $url ) )
+		);
+		if ( $stale ) {
+			echo '<div class="notice notice-warning"><p>';
+			printf(
+				/* translators: %s: comma-separated host names */
+				esc_html__( 'These tracked URLs are not on this site (%s), so Aftercare no longer checks them. Remove them, or allow their domain with the aftercare_allowed_hosts filter:', 'aftercare' ),
+				esc_html( $hosts )
+			);
+			echo '</p><ul class="ul-disc">';
+			foreach ( $stale as $url ) {
+				echo '<li><code>' . esc_html( (string) $url ) . '</code></li>';
+			}
+			echo '</ul></div>';
+		}
+	}
+
 	public static function handle_save(): void {
 		if ( ! current_user_can( Menu::CAP ) ) {
 			wp_die( esc_html__( 'You do not have permission to do that.', 'aftercare' ) );
@@ -173,12 +263,29 @@ final class SettingsPage {
 		check_admin_referer( 'aftercare_save_settings' );
 
 		// phpcs:disable WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- each field sanitized below.
-		$urls = array();
+		$urls     = array();
+		$rejected = array();
 		foreach ( preg_split( '/\r\n|\r|\n/', (string) wp_unslash( $_POST['tracked_urls'] ?? '' ) ) as $line ) {
-			$url = esc_url_raw( trim( $line ) );
-			if ( '' !== $url ) {
-				$urls[] = $url;
+			$line = trim( $line );
+			if ( '' === $line ) {
+				continue;
 			}
+			$url = esc_url_raw( $line );
+			if ( '' !== $url && Options::is_trackable_url( $url ) ) {
+				$urls[] = $url;
+			} else {
+				// Shown back escaped, so only the length needs bounding.
+				$rejected['tracked_urls'][] = mb_substr( $line, 0, 200 );
+			}
+		}
+
+		// Secrets are never shown in the form: blank keeps the stored value.
+		$stored  = Options::all();
+		$api_key = sanitize_text_field( wp_unslash( $_POST['api_key'] ?? '' ) );
+		if ( ! empty( $_POST['api_key_remove'] ) ) {
+			$api_key = '';
+		} elseif ( '' === $api_key ) {
+			$api_key = (string) $stored['api_key'];
 		}
 
 		$budgets_in = (array) wp_unslash( $_POST['budgets'] ?? array() );
@@ -188,7 +295,7 @@ final class SettingsPage {
 		}
 
 		$new = array(
-			'api_key'                => sanitize_text_field( wp_unslash( $_POST['api_key'] ?? '' ) ),
+			'api_key'                => $api_key,
 			'tracked_urls'           => $urls,
 			'budgets'                => $budgets,
 			'rum_enabled'            => ! empty( $_POST['rum_enabled'] ),
@@ -204,8 +311,21 @@ final class SettingsPage {
 		// Only write add-on settings that were actually rendered, so a stored
 		// value is never silently cleared by a form that did not contain it.
 		if ( class_exists( Slack::class ) && class_exists( Webhook::class ) ) {
-			$new['slack_webhook'] = esc_url_raw( wp_unslash( $_POST['slack_webhook'] ?? '' ) );
-			$new['webhook_url']   = esc_url_raw( wp_unslash( $_POST['webhook_url'] ?? '' ) );
+			foreach ( array( 'slack_webhook', 'webhook_url' ) as $key ) {
+				$value = trim( (string) wp_unslash( $_POST[ $key ] ?? '' ) );
+				$url   = esc_url_raw( $value );
+				if ( ! empty( $_POST[ $key . '_remove' ] ) ) {
+					$new[ $key ] = '';
+				} elseif ( '' === $value ) {
+					$new[ $key ] = (string) $stored[ $key ];
+				} elseif ( '' !== $url && Options::is_https_url( $url ) ) {
+					$new[ $key ] = $url;
+				} else {
+					// The stored value stays. The rejected one is not echoed
+					// back: a mistyped Slack webhook is still a secret.
+					$rejected[ $key ] = true;
+				}
+			}
 		}
 
 		if ( class_exists( ReportBuilder::class ) ) {
@@ -224,6 +344,10 @@ final class SettingsPage {
 		// phpcs:enable
 
 		Options::update( $new );
+
+		if ( $rejected ) {
+			set_transient( self::REJECTED_TRANSIENT . get_current_user_id(), $rejected, 5 * MINUTE_IN_SECONDS );
+		}
 
 		wp_safe_redirect( admin_url( 'admin.php?page=aftercare-settings&updated=1' ) );
 		exit;

@@ -93,12 +93,100 @@ final class Options {
 		if ( is_array( $extra ) ) {
 			foreach ( $extra as $url ) {
 				$url = esc_url_raw( trim( (string) $url ) );
-				if ( '' !== $url && ! in_array( $url, $urls, true ) ) {
+				// Settings saved before 1.1.1 accepted any URL.
+				if ( '' !== $url && self::is_trackable_url( $url ) && ! in_array( $url, $urls, true ) ) {
 					$urls[] = $url;
 				}
 			}
 		}
 		return $urls;
+	}
+
+	/**
+	 * Hosts a tracked URL may point at: the hosts of home_url() and
+	 * site_url(), plus any added through the aftercare_allowed_hosts filter.
+	 *
+	 * @return string[] Lowercase host names.
+	 */
+	public static function allowed_hosts(): array {
+		$hosts = array(
+			(string) wp_parse_url( home_url(), PHP_URL_HOST ),
+			(string) wp_parse_url( site_url(), PHP_URL_HOST ),
+		);
+		/**
+		 * Filter the hosts tracked URLs may point at. Aftercare requests
+		 * tracked URLs from the server every hour, so only add domains this
+		 * site serves, such as a separate shop or language domain.
+		 *
+		 * @param string[] $hosts Host names, by default those of home_url() and site_url().
+		 */
+		$hosts = (array) apply_filters( 'aftercare_allowed_hosts', $hosts );
+		return array_values( array_unique( array_filter( array_map( static fn( $host ) => strtolower( trim( (string) $host ) ), $hosts ) ) ) );
+	}
+
+	/**
+	 * Whether a URL may be tracked: an http(s) URL without credentials on an
+	 * allowed host, on the standard port or the port this site itself uses.
+	 * Keeps the hourly availability check and the lab checks from being
+	 * pointed at other servers or internal addresses.
+	 *
+	 * @param string $url URL to test.
+	 */
+	public static function is_trackable_url( string $url ): bool {
+		$parts = wp_parse_url( $url );
+		if ( ! is_array( $parts ) || empty( $parts['host'] ) || isset( $parts['user'] ) || isset( $parts['pass'] ) ) {
+			return false;
+		}
+		$scheme = strtolower( (string) ( $parts['scheme'] ?? '' ) );
+		if ( 'http' !== $scheme && 'https' !== $scheme ) {
+			return false;
+		}
+		if ( ! in_array( strtolower( $parts['host'] ), self::allowed_hosts(), true ) ) {
+			return false;
+		}
+		$ports = array( 80, 443, self::port( home_url() ), self::port( site_url() ) );
+		return in_array( self::port( $url ), $ports, true );
+	}
+
+	/**
+	 * Whether a URL is on this site's own host and port, as home_url()
+	 * gives them. Only those requests may skip TLS verification through
+	 * the https_local_ssl_verify filter.
+	 *
+	 * @param string $url URL to test.
+	 */
+	public static function is_home_url( string $url ): bool {
+		$host = wp_parse_url( $url, PHP_URL_HOST );
+		return is_string( $host )
+			&& strtolower( $host ) === strtolower( (string) wp_parse_url( home_url(), PHP_URL_HOST ) )
+			&& self::port( $url ) === self::port( home_url() );
+	}
+
+	/**
+	 * Port a URL connects to, with the scheme's default filled in.
+	 *
+	 * @param string $url URL.
+	 */
+	private static function port( string $url ): int {
+		$parts = wp_parse_url( $url );
+		if ( ! is_array( $parts ) ) {
+			return 0;
+		}
+		if ( isset( $parts['port'] ) ) {
+			return (int) $parts['port'];
+		}
+		return 'https' === strtolower( (string) ( $parts['scheme'] ?? '' ) ) ? 443 : 80;
+	}
+
+	/**
+	 * Whether a URL is fit for a Slack or webhook endpoint: an absolute
+	 * https URL with a host.
+	 *
+	 * @param string $url URL to test.
+	 */
+	public static function is_https_url( string $url ): bool {
+		$parts = wp_parse_url( $url );
+		return is_array( $parts ) && ! empty( $parts['host'] ) && 'https' === strtolower( (string) ( $parts['scheme'] ?? '' ) );
 	}
 
 	/**

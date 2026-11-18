@@ -4,7 +4,7 @@ Tags: core web vitals, performance, monitoring, activity log, client reports
 Requires at least: 6.4
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.1.0
+Stable tag: 1.1.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -22,8 +22,8 @@ It is built for agencies and freelancers who maintain client sites on monthly ca
 
 * Daily p75 values for **LCP, INP, CLS and TTFB** from the Chrome UX Report — real field data from actual Chrome users, fetched with your own free Google API key
 * Daily **Lighthouse lab checks** (mobile, median of 3 runs) through the PageSpeed Insights API with the same key: LCP, CLS, TTFB and Total Blocking Time, so sites with too little traffic for the Chrome UX Report still get data. Shown separately from field data, never mixed with it
-* Optional **real-user monitoring beacon**: ~2 KB, no external libraries or services, loaded for a configurable sample of visits and aggregated to daily p75 on your own site
-* Track the homepage plus as many other URLs as you like, with sparkline trends and pass / warn / fail status pills
+* Optional **real-user monitoring beacon**: ~2 KB, no external libraries or services, loaded for a configurable sample of visits and aggregated to daily p75 on your own site for the pages you track
+* Track the homepage plus as many other pages of your site as you like, with sparkline trends and pass / warn / fail status pills
 
 = 💰 Performance budgets and incidents =
 
@@ -44,7 +44,7 @@ It is built for agencies and freelancers who maintain client sites on monthly ca
 
 * **PHP fatal errors** are recorded from the moment Aftercare loads, grouped by file and line on a PHP Errors screen with the plugin or theme that most likely caused them
 * A new fatal error writes a ledger entry and opens an incident with an email alert, even when it broke the site while plugins were loading
-* An **availability check** requests the homepage and tracked URLs every hour and shortly after each update, and opens an incident when a page returns a server error, goes missing or is cut off before it finishes rendering
+* An **availability check** requests the homepage and tracked URLs every hour and shortly after each update, and opens an incident when a page returns a server error, goes missing or is cut off before it finishes rendering. Each request adds an `aftercare_check` parameter so it gets past page caches and reaches your server (see the FAQ)
 * Only the file, line and first line of the message are stored, on your own site, with nothing about the visitor
 
 = 🧰 Fits into your workflow =
@@ -68,7 +68,7 @@ Aftercare is built and maintained by [Nomad Developer](https://www.nomad-develop
 
 = Privacy =
 
-Aftercare does not phone home. CrUX data is fetched directly from Google's API using the key you provide. The optional RUM beacon posts anonymous metric values (no cookies, no personal data, no IPs stored) to your own site's REST API and can be disabled at any time.
+Aftercare does not phone home. CrUX data is fetched directly from Google's API using the key you provide. The optional RUM beacon posts anonymous metric values (no cookies, no personal data, no IPs stored) to your own site's REST API and can be disabled at any time. Only pages you track are recorded. To limit abuse, a one-way hash of each visitor's IP address is kept for one minute to count their measurements; the address itself is never stored.
 
 == External Services ==
 
@@ -99,6 +99,10 @@ No. Tracked URLs are unlimited, vitals are kept for thirteen months and the ledg
 
 By default all Aftercare tables and options are removed on uninstall. Tick "Keep Aftercare data" in Settings to preserve them.
 
+= Does the availability check bypass my page cache or CDN? =
+
+Yes, on purpose. Every availability request adds `?aftercare_check=<timestamp>` to the tracked URL, so page caches and CDNs pass it through to your server instead of answering from a cached copy that could hide a broken page. Each check therefore reaches the origin server: one request per URL (the homepage and up to 5 tracked URLs, adjustable with the `aftercare_availability_max_urls` filter) every hour, a confirming request 2 minutes after a failure and a check after each plugin, theme or core update. The requests come from your own server with the user agent "Aftercare availability check". Turn the availability check off in Settings if you would rather not have this traffic.
+
 = Can I run the checks from a server cron instead of WP-Cron? =
 
 Yes. `wp aftercare run` executes the full daily pipeline (CrUX pull, RUM aggregation, breach detection, retention). Aftercare also uses Action Scheduler automatically when another plugin (such as WooCommerce) provides it.
@@ -111,6 +115,22 @@ Yes. `wp aftercare run` executes the full daily pipeline (CrUX pull, RUM aggrega
 4. Settings — API key, tracked URLs, performance budgets and notifications
 
 == Changelog ==
+
+= 1.1.1 =
+Security and robustness release from an audit of 1.1.0.
+
+* Security: the real-user monitoring endpoint only records pages you track. Beacons for any other address are ignored before anything is written, so a script posting made-up addresses can no longer grow the database
+* Security: beacons are kept in their own table, one row each, instead of one shared settings row rewritten on every visit. This removes lost updates and lock contention on busy sites. Each page and metric keeps at most 500 values a day, request bodies over 1 KB are refused and each IP address may send 30 beacons a minute (filter `aftercare_rum_rate_limit`)
+* Security: page addresses are normalised before matching, so /page, /page/ and /page/?utm_source=x count as one page. The beacon no longer sends the query string
+* Security: the change ledger CSV export prefixes an apostrophe to cells starting with =, +, -, @, a tab or a carriage return, so post titles and display names cannot run as spreadsheet formulas. The export now streams in pages of 1,000 rows instead of loading the whole ledger into memory
+* Security: tracked URLs must be on this site (the hosts of the site address and the WordPress address, or domains added with the new `aftercare_allowed_hosts` filter). Other lines are refused with a notice when you save, and tracked URLs saved earlier for other hosts are no longer requested
+* Security: the availability check follows redirects one hop at a time. Only requests to this site use the `https_local_ssl_verify` setting; any other host goes through the WordPress safe request functions with TLS always verified
+* Security: Slack and webhook URLs must be https URLs and are sent to with the WordPress safe request functions
+* Security: requests to internal addresses are refused on every supported WordPress version, including link-local cloud metadata (169.254.169.254) and carrier-grade NAT addresses, which WordPress before 7.1 does not block itself
+* Security: the Google API key and the Slack and webhook URLs are no longer written into the settings page. Their fields show a "Saved" placeholder, a blank field keeps the stored value and a checkbox removes it
+* Security: stored PHP error messages are scrubbed of passwords, tokens, keys and database user and host names, and the WordPress root path is shown as ~/
+* Documented that the availability check adds an `aftercare_check` parameter to get past page caches, so each hourly request reaches your server
+* Database upgrade runs automatically: one new table for real-user monitoring beacons. Values buffered by 1.1.0 are kept
 
 = 1.1.0 =
 * New: daily Lighthouse lab checks through the PageSpeed Insights API with your existing Google key (LCP, CLS, TTFB and Total Blocking Time), shown separately from field data. Sites with too little traffic for the Chrome UX Report now get data too
@@ -154,6 +174,9 @@ Yes. `wp aftercare run` executes the full daily pipeline (CrUX pull, RUM aggrega
 * Pro: cause attribution, white-label client reports, Slack/webhooks, extended retention
 
 == Upgrade Notice ==
+
+= 1.1.1 =
+Security hardening for real-user monitoring, the CSV export, tracked URLs, webhooks, stored secrets and error messages. Tracked URLs on other domains are no longer checked; allow extra domains with the aftercare_allowed_hosts filter.
 
 = 1.1.0 =
 Adds lab checks, re-tests after updates, fatal error tracking and an availability check. The database upgrades automatically and existing data and settings are kept. Lab checks need the PageSpeed Insights API enabled for your Google key.
