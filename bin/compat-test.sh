@@ -160,10 +160,11 @@ curl -s -c "$JAR" -b "$JAR" -o /dev/null -d 'log=admin&pwd=password&wp-submit=Lo
 # Run the flow first so the screens below render with real data.
 php "$CHECKS" "$WP_DIR" flow
 
+# The expected status can list alternatives separated by "|", such as "403|404".
 page() {
 	local path="$1" expect="$2" code
 	code="$( curl -s -b "$JAR" -o "$WORK/page.html" -w '%{http_code}' "$BASE/wp-admin/$path" )"
-	[ "$code" = "$expect" ] || fail "$path returned $code, expected $expect"
+	[[ "|$expect|" == *"|$code|"* ]] || fail "$path returned $code, expected $expect"
 	echo "PASS $path returns $code"
 }
 
@@ -206,9 +207,10 @@ else
 	echo 'SKIP WP-CLI checks (wp not installed)'
 fi
 
-# The free build ships no reports screen.
+# The free build ships no reports screen, so WordPress refuses it. WordPress
+# 7.1 and older answer an unregistered admin page with 403, and 7.2 with 404.
 if [ ! -f "$WP_DIR/wp-content/plugins/aftercare/src/Reports/Builder.php" ]; then
-	page 'admin.php?page=aftercare-reports' 403
+	page 'admin.php?page=aftercare-reports' '403|404'
 fi
 
 curl -s -b "$JAR" -o "$WORK/front.html" "$BASE/"
