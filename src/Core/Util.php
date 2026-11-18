@@ -42,7 +42,7 @@ final class Util {
 	 * public internet: loopback, private, link-local (which includes cloud
 	 * metadata at 169.254.169.254), carrier-grade NAT or reserved.
 	 *
-	 * wp_safe_remote_get() makes the same check, but WordPress versions
+	 * WordPress makes the same check in wp_safe_remote_get(), but versions
 	 * before 7.0 do not treat link-local or carrier-grade NAT addresses as
 	 * internal, so this check is needed on every version Aftercare supports.
 	 * A host that does not resolve is left to core, which refuses it.
